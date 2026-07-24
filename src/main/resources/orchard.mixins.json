@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "de.minehackers.orchard.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "TreeFeatureMixin",
+    "HugeFungusFeatureMixin",
+    "HugeMushroomFeatureMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

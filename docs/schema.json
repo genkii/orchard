@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Orchard Definition",
+  "description": "Schema for Orchard mod tree/fungus/mushroom replacement definitions",
+  "type": ["object", "array"],
+  "items": { "$ref": "#/$defs/definition" },
+  "$defs": {
+    "definition": {
+      "type": "object",
+      "required": ["nbt"],
+      "properties": {
+        "nbt": {
+          "type": "string",
+          "description": "Name of the .nbt structure file (without extension) in config/orchard/nbt/",
+          "pattern": "^[a-zA-Z0-9_\\-\\.]+$",
+          "minLength": 1
+        },
+        "tree_type": {
+          "oneOf": [
+            { "$ref": "#/$defs/treeTypeString" },
+            { "$ref": "#/$defs/treeTypeObject" },
+            {
+              "type": "array",
+              "items": { "$ref": "#/$defs/treeTypeString" },
+              "minItems": 1
+            }
+          ],
+          "description": "Overworld tree type to match (e.g., 'oak', 'birch', 'spruce')"
+        },
+        "fungus_type": {
+          "oneOf": [
+            { "type": "string", "enum": ["warped", "crimson", "any"] },
+            {
+              "type": "array",
+              "items": { "type": "string", "enum": ["warped", "crimson", "any"] },
+              "minItems": 1
+            }
+          ],
+          "description": "Nether fungus type to match"
+        },
+        "mushroom_type": {
+          "oneOf": [
+            { "type": "string", "enum": ["red", "brown", "any"] },
+            {
+              "type": "array",
+              "items": { "type": "string", "enum": ["red", "brown", "any"] },
+              "minItems": 1
+            }
+          ],
+          "description": "Huge mushroom type to match"
+        },
+        "biomes": {
+          "description": "Biome filter (string, array, or filter object)",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            { "$ref": "#/$defs/biomeFilterObject" }
+          ]
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "Selection weight (higher = more common)"
+        },
+        "min_spacing": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Minimum distance in blocks between placements"
+        },
+        "rare": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, only appears in the rare pool (2.5% chance)"
+        },
+        "origin_y_offset": {
+          "type": "integer",
+          "default": 0,
+          "description": "Y offset for underground root placement"
+        }
+      },
+      "allOf": [
+        {
+          "anyOf": [
+            { "required": ["tree_type"] },
+            { "required": ["fungus_type"] },
+            { "required": ["mushroom_type"] }
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "treeTypeString": {
+      "type": "string",
+      "enum": [
+        "oak", "fancy_oak", "birch", "spruce", "spruce_only", "pine",
+        "mega_pine", "mega_spruce", "jungle_small", "jungle_mega", "jungle_bush",
+        "acacia", "dark_oak", "cherry", "swamp", "azalea", "mangrove"
+      ]
+    },
+    "treeTypeObject": {
+      "type": "object",
+      "properties": {
+        "foliage": {
+          "type": "string",
+          "enum": [
+            "blob", "fancy", "spruce", "pine", "mega_pine", "mega_jungle",
+            "bush", "acacia", "dark_oak", "cherry", "random_spread"
+          ]
+        },
+        "trunk": {
+          "type": "string",
+          "enum": ["dark_oak", "forking", "giant", "mega_jungle", "upwards_branching"]
+        },
+        "trunk_block": {
+          "type": "string",
+          "description": "Block ID of the trunk (e.g., 'minecraft:oak_log')"
+        }
+      },
+      "additionalProperties": false
+    },
+    "biomeFilterObject": {
+      "type": "object",
+      "properties": {
+        "any_of": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/biomeFilter" },
+          "minItems": 1
+        },
+        "all_of": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/biomeFilter" },
+          "minItems": 1
+        },
+        "not": { "$ref": "#/$defs/biomeFilter" }
+      },
+      "additionalProperties": false
+    },
+    "biomeFilter": {
+      "oneOf": [
+        { "type": "string" },
+        { "$ref": "#/$defs/biomeFilterObject" }
+      ]
+    }
+  }
+}
