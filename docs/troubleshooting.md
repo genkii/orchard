@@ -37,6 +37,10 @@ The mod caches NBT templates after first load. If you see stutter on the first c
 If you have many definitions (100+), consider:
 - Reducing the number of variants per tree type.
 - Using the same NBT file for multiple definitions (the cache shares them).
+- Using `dimensions` to prevent definitions from matching in dimensions where they aren't needed.
+- Using `min_y`/`max_y` to narrow the Y range where replacements occur.
+
+The placement index is pruned automatically every 4096 placements to prevent memory growth on long-running servers. Chunks that haven't been accessed in 30 minutes are evicted.
 
 ### Server crashes on startup
 
@@ -60,3 +64,4 @@ Check the log for the specific error. Common causes:
 | `[Orchard] Template null for filename` | Debug: NBT failed to load, falling back to vanilla. |
 | `[Orchard] Created directory: path` | A config subdirectory was created on first launch. |
 | `[Orchard] Cache pre-warmed: X loaded, Y missing` | Summary of template cache at server start. |
+| `[Orchard] Pruned X stale chunk(s) from placement index.` | Debug: old chunks removed from the placement index during periodic pruning. |

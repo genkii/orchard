@@ -26,8 +26,16 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 
 /**
  * Handles loading, caching, and placing NBT structure templates as trees.
- * Delegates spatial indexing to {@link PlacementIndex} and terrain protection
- * to {@link TerrainPreservingProcessor}.
+ * <p>
+ * Templates are cached in a thread-safe {@link ConcurrentHashMap} keyed by
+ * file name. A sentinel object is stored for failed loads to prevent repeated
+ * disk I/O for missing files.
+ * <p>
+ * {@link StructurePlaceSettings} are allocated per-placement to avoid
+ * shared mutable state across threads during concurrent world generation.
+ * <p>
+ * Spatial indexing is delegated to {@link PlacementIndex} and terrain
+ * protection to {@link TerrainPreservingProcessor}.
  */
 public final class NbtTreePlacer {
 
@@ -48,17 +56,23 @@ public final class NbtTreePlacer {
     /** Maximum file size for NBT files (10 MB). */
     private static final long MAX_NBT_FILE_SIZE = 10 * 1024 * 1024;
 
-    /** Pre-built placement settings for each rotation, avoids allocation per placement. */
-    private static final StructurePlaceSettings[] SETTINGS_BY_ROTATION = new StructurePlaceSettings[4];
-    static {
-        for (int i = 0; i < 4; i++) {
-            SETTINGS_BY_ROTATION[i] = new StructurePlaceSettings()
-                    .setMirror(Mirror.NONE)
-                    .setRotation(ROTATIONS[i])
-                    .setIgnoreEntities(true)
-                    .addProcessor(TerrainPreservingProcessor.INSTANCE);
-        }
-    }
+    /** Maximum number of blocks to check downward when adjusting the origin to solid ground. */
+    private static final int MAX_GROUND_ADJUST = 2;
+
+    /** Number of blocks above the origin to scan for nearby logs during spacing checks. */
+    private static final int LOG_SCAN_HEIGHT_ABOVE = 6;
+
+    /** Number of blocks below the origin to scan for nearby logs during spacing checks. */
+    private static final int LOG_SCAN_DEPTH_BELOW = 2;
+
+    /** Flags passed to {@link StructureTemplate#placeInWorld} (3 = skip updating neighbors + notify neighbors). */
+    private static final int PLACE_FLAGS = 3;
+
+    /** Default maximum fraction of obstructed columns allowed during placement clearance checks. */
+    private static double maxObstructedFraction = 0.10;
+
+    /** Number of blocks upward to check when scanning for obstructing columns. */
+    private static final int WALL_CHECK_HEIGHT = 5;
 
     /**
      * Returns the terrain-preserving structure processor singleton.
@@ -95,6 +109,9 @@ public final class NbtTreePlacer {
 
     /**
      * Returns the cached template for the given definition, loading it from disk if necessary.
+     * <p>
+     * Uses {@link ConcurrentHashMap#computeIfAbsent} to guarantee that each
+     * file is loaded at most once, even under concurrent access.
      *
      * @param def   the orchard definition
      * @param level the server level for registry access
@@ -103,16 +120,11 @@ public final class NbtTreePlacer {
     @Nullable
     public static StructureTemplate getOrLoad(OrchardDefinition def, ServerLevelAccessor level) {
         String key = def.getNbtFileName();
-        StructureTemplate cached = CACHE.get(key);
-        if (cached != null) {
-            return cached == FAILED_LOAD_SENTINEL ? null : cached;
-        }
-
-        if (CACHE.containsKey(key)) return null;
-
-        StructureTemplate loaded = tryLoad(key, def.getNbtDirectory(), level);
-        CACHE.put(key, loaded != null ? loaded : FAILED_LOAD_SENTINEL);
-        return loaded;
+        StructureTemplate result = CACHE.computeIfAbsent(key, k -> {
+            StructureTemplate loaded = tryLoad(k, def.getNbtDirectory(), level);
+            return loaded != null ? loaded : FAILED_LOAD_SENTINEL;
+        });
+        return result == FAILED_LOAD_SENTINEL ? null : result;
     }
 
     /**
@@ -183,6 +195,10 @@ public final class NbtTreePlacer {
 
     /**
      * Checks whether any log block exists within the given radius of the origin.
+     * <p>
+     * Scans a cylinder of radius {@code radius} blocks, from
+     * {@link #LOG_SCAN_DEPTH_BELOW} blocks below to {@link #LOG_SCAN_HEIGHT_ABOVE}
+     * blocks above the origin. Skips chunks that are not loaded.
      *
      * @param level  the server level
      * @param origin the center position
@@ -200,7 +216,7 @@ public final class NbtTreePlacer {
                 int chunkX = wx >> 4;
                 int chunkZ = wz >> 4;
                 if (!level.hasChunk(chunkX, chunkZ)) continue;
-                for (int dy = -2; dy <= 6; dy++) {
+                for (int dy = -LOG_SCAN_DEPTH_BELOW; dy <= LOG_SCAN_HEIGHT_ABOVE; dy++) {
                     check.setWithOffset(origin, dx, dy, dz);
                     if (level.getBlockState(check).is(BlockTags.LOGS)) return true;
                 }
@@ -229,11 +245,13 @@ public final class NbtTreePlacer {
         return true;
     }
 
-    private static final double WALL_MAX_OBSTRUCTED_FRACTION = 0.10;
-    private static final int WALL_CHECK_HEIGHT = 5;
-
     /**
      * Checks whether the area around the origin is sufficiently clear of obstructing blocks.
+     * <p>
+     * Scans a cylinder of columns with radius based on the structure footprint
+     * (capped at 8 blocks). For each column, checks up to {@link #WALL_CHECK_HEIGHT}
+     * blocks upward. If more than {@link #maxObstructedFraction} of columns contain
+     * an obstructing block, placement is rejected.
      *
      * @param level        the server level
      * @param origin       the center position
@@ -264,19 +282,22 @@ public final class NbtTreePlacer {
 
         if (totalColumns == 0) return true;
 
-        boolean clear = (double) obstructedColumns / totalColumns <= WALL_MAX_OBSTRUCTED_FRACTION;
+        boolean clear = (double) obstructedColumns / totalColumns <= maxObstructedFraction;
 
         if (!clear) {
             Orchard.LOGGER.debug("[Orchard] Blocked placement at {} – {}/{} columns obstructed ({}%, limit {}%)",
                     origin, obstructedColumns, totalColumns,
                     (obstructedColumns * 100) / totalColumns,
-                    (int) (WALL_MAX_OBSTRUCTED_FRACTION * 100));
+                    (int) (maxObstructedFraction * 100));
         }
         return clear;
     }
 
     /**
      * Determines whether the given block state should be considered an obstruction.
+     * <p>
+     * Air, replaceable blocks, carver-replaceable blocks, nylium, dirt, leaves,
+     * and logs are not considered obstructions. All other solid blocks are.
      *
      * @param state the block state to test
      * @return {@code true} if the block is a solid obstruction
@@ -295,6 +316,10 @@ public final class NbtTreePlacer {
 
     /**
      * Adjusts the origin downward to find the first solid ground within the given range.
+     * <p>
+     * Moves down block by block; if the block below is non-air, non-liquid, and
+     * replaceable (e.g. snow layer), the origin is shifted down. Stops at the first
+     * non-replaceable block or after {@link #MAX_GROUND_ADJUST} blocks.
      *
      * @param level  the server level
      * @param origin the starting position
@@ -332,6 +357,9 @@ public final class NbtTreePlacer {
 
     /**
      * Places a structure template at the given origin with a specific rotation.
+     * <p>
+     * A fresh {@link StructurePlaceSettings} is created for each placement to
+     * avoid thread-safety issues with shared mutable state.
      *
      * @param template       the structure template to place
      * @param level          the server level
@@ -357,8 +385,39 @@ public final class NbtTreePlacer {
 
         BlockPos corner = origin.offset(cornerX, originYOffset, cornerZ);
 
-        StructurePlaceSettings settings = SETTINGS_BY_ROTATION[rotation.ordinal()];
+        StructurePlaceSettings settings = new StructurePlaceSettings()
+                .setMirror(Mirror.NONE)
+                .setRotation(rotation)
+                .setIgnoreEntities(true)
+                .addProcessor(TerrainPreservingProcessor.INSTANCE);
 
-        template.placeInWorld(level, corner, BlockPos.ZERO, settings, random, 3);
+        template.placeInWorld(level, corner, BlockPos.ZERO, settings, random, PLACE_FLAGS);
+    }
+
+    /**
+     * Returns the current maximum obstructed column fraction for placement clearance checks.
+     *
+     * @return the maximum fraction (0.0 to 1.0)
+     */
+    public static double getMaxObstructedFraction() {
+        return maxObstructedFraction;
+    }
+
+    /**
+     * Sets the maximum obstructed column fraction for placement clearance checks.
+     *
+     * @param fraction the maximum fraction (0.0 to 1.0); values outside this range are clamped
+     */
+    public static void setMaxObstructedFraction(double fraction) {
+        maxObstructedFraction = Math.max(0.0, Math.min(1.0, fraction));
+    }
+
+    /**
+     * Returns the maximum ground adjustment distance in blocks.
+     *
+     * @return the maximum number of blocks to search downward
+     */
+    public static int getMaxGroundAdjust() {
+        return MAX_GROUND_ADJUST;
     }
 }

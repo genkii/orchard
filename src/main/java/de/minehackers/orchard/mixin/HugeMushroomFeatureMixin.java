@@ -16,8 +16,15 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.OrchardRegistry;
-import de.minehackers.orchard.NbtTreePlacer;
 
+/**
+ * Intercepts {@link AbstractHugeMushroomFeature#place} to replace vanilla
+ * huge mushrooms with user-defined NBT structure templates.
+ * <p>
+ * Bone-meal mushrooms (small mushrooms on the ground) are skipped.
+ * Ground validation ensures the origin is on dirt-family or mycelium.
+ * Spacing, dimension, and Y-range checks are handled by {@link FeatureInterceptor}.
+ */
 @Mixin(AbstractHugeMushroomFeature.class)
 public class HugeMushroomFeatureMixin {
 
@@ -53,14 +60,6 @@ public class HugeMushroomFeatureMixin {
         if (!groundState.is(BlockTags.DIRT) && !groundState.is(Blocks.MYCELIUM)) {
             cir.setReturnValue(false);
             return;
-        }
-
-        int spacing = def.getMinSpacing();
-        if (spacing > 0) {
-            if (NbtTreePlacer.hasNearbyPlacement(def.getNbtFileName(), origin, spacing)) {
-                cir.setReturnValue(false);
-                return;
-            }
         }
 
         FeatureInterceptor.interceptMushroom(context, cir, def, level, origin);

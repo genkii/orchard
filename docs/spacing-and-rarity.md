@@ -95,16 +95,20 @@ This gives common ~62.5%, uncommon ~25%, rare ~12.5%.
 
 ## Rare Pool (`rare`)
 
-The `rare` field places a definition into a special **rare pool** that is selected only 2.5% of the time.
+The `rare` field places a definition into a special **rare pool** that is selected only 2.5% of the time by default.
 
 ### How It Works
 
 When multiple definitions match, the selection uses a two-phase process:
 
-1. **Phase 1 - Pool gate:** If both rare and normal definitions exist, a random float is drawn. If it's below 0.025 (2.5%), the rare pool is used. Otherwise, the normal pool is used.
+1. **Phase 1 - Pool gate:** If both rare and normal definitions exist, a random float is drawn. If it's below the rare pool probability (default 0.025 = 2.5%), the rare pool is used. Otherwise, the normal pool is used.
 2. **Phase 2 - Weighted draw:** Within the chosen pool, one definition is selected using the `weight` values.
 
 If only one type of pool exists (all rare or all normal), the gate roll is skipped.
+
+### Configurable Probability
+
+The rare pool probability can be inspected via `/orchard status` and defaults to 2.5%. The value is read at runtime and can be changed programmatically via `OrchardRegistry.setRarePoolProbability(float)`.
 
 ### Examples
 

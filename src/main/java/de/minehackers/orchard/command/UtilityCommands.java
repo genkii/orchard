@@ -36,9 +36,10 @@ public final class UtilityCommands {
         try {
             List<OrchardDefinition> defs = ConfigLoader.loadAll(configDir);
             OrchardRegistry.clearAndRegisterAll(defs);
+            NbtTreePlacer.clearCache();
 
             int count = OrchardRegistry.getAll().size();
-            StatusCommands.send(src, "Reloaded " + count + " definition(s) from disk.");
+            StatusCommands.send(src, "Reloaded " + count + " definition(s) from disk. Cache cleared.");
             Orchard.LOGGER.info("[Orchard] Reloaded {} definition(s) via command.", count);
             return count;
         } catch (Exception e) {

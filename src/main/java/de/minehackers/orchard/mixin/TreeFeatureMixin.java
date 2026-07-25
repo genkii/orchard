@@ -14,10 +14,19 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import de.minehackers.orchard.NbtTreePlacer;
 import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.OrchardRegistry;
-import de.minehackers.orchard.NbtTreePlacer;
 
+/**
+ * Intercepts {@link TreeFeature#place} to replace vanilla trees with
+ * user-defined NBT structure templates.
+ * <p>
+ * The mixin cancels vanilla placement at HEAD and delegates to
+ * {@link FeatureInterceptor#interceptTree} after matching against
+ * registered definitions. Spacing, dimension, and Y-range checks
+ * are handled by the interceptor.
+ */
 @Mixin(TreeFeature.class)
 public class TreeFeatureMixin {
 
@@ -47,18 +56,6 @@ public class TreeFeatureMixin {
         }
 
         origin = NbtTreePlacer.groundAdjust(level, origin, 2);
-
-        int spacing = def.getMinSpacing();
-        if (spacing > 0) {
-            boolean tooClose = NbtTreePlacer.hasNearbyPlacement(def.getNbtFileName(), origin, spacing);
-            if (!tooClose) {
-                tooClose = NbtTreePlacer.hasNearbyLog(level, origin, spacing);
-            }
-            if (tooClose) {
-                cir.setReturnValue(false);
-                return;
-            }
-        }
 
         FeatureInterceptor.interceptTree(context, cir, def, level, origin);
     }

@@ -31,6 +31,46 @@ Only replace trees in specific biomes:
 ]
 ```
 
+## Dimension-Restricted
+
+Only replace trees in the Overworld (prevent Nether/End placement):
+
+```json
+{
+  "nbt": "overworld_oak",
+  "tree_type": "oak",
+  "dimensions": ["minecraft:overworld"]
+}
+```
+
+## Y-Range Restricted
+
+Only place trees above a certain elevation:
+
+```json
+{
+  "nbt": "mountain_pine",
+  "tree_type": "pine",
+  "biomes": "#minecraft:is_taiga",
+  "min_y": 100,
+  "max_y": 256
+}
+```
+
+## Dimension + Y-Range Combined
+
+Restrict to the Overworld and a specific Y range:
+
+```json
+{
+  "nbt": "highland_oak",
+  "tree_type": "oak",
+  "dimensions": ["minecraft:overworld"],
+  "min_y": 120,
+  "max_y": 200
+}
+```
+
 ## Rare Variant
 
 A special tree that only appears 2.5% of the time:

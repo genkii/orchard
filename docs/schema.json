@@ -57,6 +57,22 @@
             { "$ref": "#/$defs/biomeFilterObject" }
           ]
         },
+        "dimensions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Dimension type resource locations to restrict placement (empty = all dimensions)",
+          "examples": [["minecraft:overworld"], ["minecraft:overworld", "minecraft:the_nether"]]
+        },
+        "min_y": {
+          "type": "integer",
+          "default": 0,
+          "description": "Minimum Y coordinate for placement (0 = no minimum)"
+        },
+        "max_y": {
+          "type": "integer",
+          "default": 0,
+          "description": "Maximum Y coordinate for placement (0 = no maximum)"
+        },
         "weight": {
           "type": "integer",
           "minimum": 1,
@@ -72,7 +88,7 @@
         "rare": {
           "type": "boolean",
           "default": false,
-          "description": "If true, only appears in the rare pool (2.5% chance)"
+          "description": "If true, only appears in the rare pool (2.5% chance by default)"
         },
         "origin_y_offset": {
           "type": "integer",

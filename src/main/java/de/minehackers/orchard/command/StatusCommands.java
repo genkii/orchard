@@ -10,12 +10,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.biome.Biome;
+import de.minehackers.orchard.NbtTreePlacer;
 import de.minehackers.orchard.Orchard;
 import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.OrchardRegistry;
 
 /**
  * Status and list commands for inspecting registered orchard definitions.
+ * <p>
+ * Displays definition properties including weight, spacing, Y offset,
+ * dimension filters, Y range, and NBT file availability.
  */
 public final class StatusCommands {
 
@@ -46,11 +50,15 @@ public final class StatusCommands {
                 Path filePath = nbtDir.resolve(def.getNbtFileName());
                 String check = Files.exists(filePath) ? "OK" : "MISSING";
                 String tag = def.isRare() ? " [rare]" : "";
+                String dimTag = def.getDimensions().isEmpty()
+                        ? "" : " dims=" + def.getDimensions().size();
+                String yTag = (def.getMinY() != 0 || def.getMaxY() != 0)
+                        ? " y=[" + def.getMinY() + "," + def.getMaxY() + "]" : "";
                 String info = "  " + def.getNbtFileName()
                     + "  (w=" + def.getWeight()
                     + ", spacing=" + def.getMinSpacing()
                     + ", offset=" + def.getOriginYOffset()
-                    + tag + ")  " + check;
+                    + tag + dimTag + yTag + ")  " + check;
                 if ("MISSING".equals(check)) {
                     sendError(src, info);
                 } else {
@@ -61,6 +69,8 @@ public final class StatusCommands {
 
         send(src, "");
         send(src, "NBT directory: " + nbtDir);
+        send(src, "Rare pool probability: " + String.format("%.1f%%", OrchardRegistry.getRarePoolProbability() * 100));
+        send(src, "Max obstructed fraction: " + String.format("%.0f%%", NbtTreePlacer.getMaxObstructedFraction() * 100));
 
         if (src.isPlayer()) {
             try {

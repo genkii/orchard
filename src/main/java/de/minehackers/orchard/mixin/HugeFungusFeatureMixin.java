@@ -13,8 +13,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.OrchardRegistry;
-import de.minehackers.orchard.NbtTreePlacer;
 
+/**
+ * Intercepts {@link HugeFungusFeature#place} to replace vanilla huge fungi
+ * with user-defined NBT structure templates.
+ * <p>
+ * Player-bone-mealed fungi ({@code config.planted}) are skipped. Spacing,
+ * dimension, and Y-range checks are handled by {@link FeatureInterceptor}.
+ */
 @Mixin(HugeFungusFeature.class)
 public class HugeFungusFeatureMixin {
 
@@ -38,14 +44,6 @@ public class HugeFungusFeatureMixin {
         OrchardDefinition def =
                 OrchardRegistry.pickByFungusWorldGen(config, biome, context.random());
         if (def == null) return;
-
-        int spacing = def.getMinSpacing();
-        if (spacing > 0) {
-            if (NbtTreePlacer.hasNearbyPlacement(def.getNbtFileName(), origin, spacing)) {
-                cir.setReturnValue(false);
-                return;
-            }
-        }
 
         FeatureInterceptor.interceptFungus(context, cir, def, level, origin);
     }
