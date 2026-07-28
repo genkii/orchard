@@ -3,8 +3,10 @@ package de.minehackers.orchard;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
@@ -12,17 +14,22 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessor;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Handles loading, caching, and placing NBT structure templates as trees.
@@ -57,7 +64,7 @@ public final class NbtTreePlacer {
     private static final long MAX_NBT_FILE_SIZE = 10 * 1024 * 1024;
 
     /** Maximum number of blocks to check downward when adjusting the origin to solid ground. */
-    private static final int MAX_GROUND_ADJUST = 2;
+    private static final int MAX_GROUND_ADJUST = 4;
 
     /** Number of blocks above the origin to scan for nearby logs during spacing checks. */
     private static final int LOG_SCAN_HEIGHT_ABOVE = 6;
@@ -65,7 +72,7 @@ public final class NbtTreePlacer {
     /** Number of blocks below the origin to scan for nearby logs during spacing checks. */
     private static final int LOG_SCAN_DEPTH_BELOW = 2;
 
-    /** Flags passed to {@link StructureTemplate#placeInWorld} (3 = skip updating neighbors + notify neighbors). */
+    /** Flags passed to {@link StructureTemplate#placeInWorld} (2 = send change to clients, no neighbor updates). */
     private static final int PLACE_FLAGS = 3;
 
     /** Default maximum fraction of obstructed columns allowed during placement clearance checks. */
@@ -198,7 +205,8 @@ public final class NbtTreePlacer {
      * <p>
      * Scans a cylinder of radius {@code radius} blocks, from
      * {@link #LOG_SCAN_DEPTH_BELOW} blocks below to {@link #LOG_SCAN_HEIGHT_ABOVE}
-     * blocks above the origin. Skips chunks that are not loaded.
+     * blocks above the origin. Skips chunks that are not loaded or have already
+     * been scanned this session.
      *
      * @param level  the server level
      * @param origin the center position
@@ -208,6 +216,7 @@ public final class NbtTreePlacer {
     public static boolean hasNearbyLog(ServerLevelAccessor level, BlockPos origin, int radius) {
         long r2 = (long) radius * radius;
         BlockPos.MutableBlockPos check = new BlockPos.MutableBlockPos();
+        HashSet<Long> scannedChunks = new HashSet<>();
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
                 if ((long) dx * dx + (long) dz * dz > r2) continue;
@@ -215,6 +224,8 @@ public final class NbtTreePlacer {
                 int wz = origin.getZ() + dz;
                 int chunkX = wx >> 4;
                 int chunkZ = wz >> 4;
+                long chunkKey = chunkKey(chunkX, chunkZ);
+                if (!scannedChunks.add(chunkKey)) continue;
                 if (!level.hasChunk(chunkX, chunkZ)) continue;
                 for (int dy = -LOG_SCAN_DEPTH_BELOW; dy <= LOG_SCAN_HEIGHT_ABOVE; dy++) {
                     check.setWithOffset(origin, dx, dy, dz);
@@ -223,6 +234,10 @@ public final class NbtTreePlacer {
             }
         }
         return false;
+    }
+
+    private static long chunkKey(int chunkX, int chunkZ) {
+        return ((long) chunkX << 32) | (chunkZ & 0xFFFFFFFFL);
     }
 
     /**
@@ -241,6 +256,45 @@ public final class NbtTreePlacer {
                 return false;
             }
             check.move(0, 1, 0);
+        }
+        return true;
+    }
+
+    /** Maximum number of blocks to scan upward for open sky when checking surface validity. */
+    private static final int SKY_SCAN_HEIGHT = 24;
+
+    /**
+     * Checks whether the origin is on a valid surface for tree placement.
+     * <p>
+     * Validates three conditions:
+     * <ol>
+     *   <li>The origin block is air or replaceable (not solid stone, etc.)</li>
+     *   <li>The block directly below is solid, non-liquid, non-replaceable ground</li>
+     *   <li>There is open sky above — no solid blocks between origin and {@link #SKY_SCAN_HEIGHT}
+     *       blocks up (prevents underground/overhang placement)</li>
+     * </ol>
+     *
+     * @param level  the server level
+     * @param origin the candidate placement position (trunk base)
+     * @return {@code true} if the origin is on a valid open-air surface
+     */
+    public static boolean isOnSurface(ServerLevelAccessor level, BlockPos origin) {
+        BlockState originState = level.getBlockState(origin);
+        if (originState.isSolid()) {
+            return false;
+        }
+
+        BlockState belowState = level.getBlockState(origin.below());
+        if (belowState.isAir() || belowState.liquid() || !belowState.isSolid()) {
+            return false;
+        }
+
+        BlockPos.MutableBlockPos above = origin.mutable();
+        for (int dy = 1; dy <= SKY_SCAN_HEIGHT; dy++) {
+            above.move(0, 1, 0);
+            if (level.getBlockState(above).isSolid()) {
+                return false;
+            }
         }
         return true;
     }
@@ -340,6 +394,111 @@ public final class NbtTreePlacer {
         return origin;
     }
 
+    // -------------------------------------------------------------------------
+    // Feature interceptors (called from mixins)
+    // -------------------------------------------------------------------------
+
+    public static final AtomicBoolean TREE_FIRED_ONCE = new AtomicBoolean(false);
+    public static final AtomicBoolean FUNGUS_FIRED_ONCE = new AtomicBoolean(false);
+    public static final AtomicBoolean MUSHROOM_FIRED_ONCE = new AtomicBoolean(false);
+
+    /**
+     * Logs the first interception for a feature type.
+     */
+    public static void logFirstInterception(AtomicBoolean flag, String message) {
+        if (flag.compareAndSet(false, true)) {
+            Orchard.LOGGER.warn(message);
+        }
+    }
+
+    /**
+     * Unified interception logic for tree, fungus, and mushroom placement.
+     */
+    public static void tryIntercept(
+            FeaturePlaceContext<?> context,
+            CallbackInfoReturnable<Boolean> cir,
+            OrchardDefinition def,
+            WorldGenLevel level,
+            BlockPos origin,
+            boolean trunkCheck) {
+
+        ResourceKey<Level> dimKey = level.getLevel().dimension();
+        if (!def.matchesDimension(dimKey)) {
+            return;
+        }
+
+        if (!def.matchesYRange(origin.getY())) {
+            return;
+        }
+
+        if (!isOnSurface(level, origin)) {
+            return;
+        }
+
+        int spacing = def.getMinSpacing();
+        if (spacing > 0) {
+            boolean tooClose = hasNearbyPlacement(def.getNbtFileName(), origin, spacing);
+            if (!tooClose) {
+                tooClose = hasNearbyLog(level, origin, spacing);
+            }
+            if (tooClose) {
+                cir.setReturnValue(false);
+                return;
+            }
+        }
+
+        StructureTemplate template = getOrLoad(def, level);
+        if (template == null) {
+            Orchard.LOGGER.warn("[Orchard] Template null for {} – falling back to vanilla",
+                    def.getNbtFileName());
+            return;
+        }
+
+        if (trunkCheck && !isTrunkClear(level, origin, template.getSize().getY())) {
+            Orchard.LOGGER.debug("[Orchard] Trunk not clear at {} – falling back to vanilla", origin);
+            return;
+        }
+
+        if (!isPlacementClear(level, origin, template.getSize())) {
+            Orchard.LOGGER.debug("[Orchard] Placement not clear at {} – falling back to vanilla", origin);
+            return;
+        }
+
+        Orchard.LOGGER.debug("[Orchard] Placing {} at {}", def.getNbtFileName(), origin);
+
+        place(template, level, origin, context.random(), def.getOriginYOffset());
+        markPlaced(def.getNbtFileName(), origin);
+
+        cir.setReturnValue(true);
+    }
+
+    public static void interceptTree(
+            FeaturePlaceContext<?> context,
+            CallbackInfoReturnable<Boolean> cir,
+            OrchardDefinition def,
+            WorldGenLevel level,
+            BlockPos origin) {
+        tryIntercept(context, cir, def, level, origin, true);
+    }
+
+    public static void interceptFungus(
+            FeaturePlaceContext<?> context,
+            CallbackInfoReturnable<Boolean> cir,
+            OrchardDefinition def,
+            WorldGenLevel level,
+            BlockPos origin) {
+        tryIntercept(context, cir, def, level, origin, false);
+    }
+
+    public static void interceptMushroom(
+            FeaturePlaceContext<?> context,
+            CallbackInfoReturnable<Boolean> cir,
+            OrchardDefinition def,
+            WorldGenLevel level,
+            BlockPos origin) {
+        tryIntercept(context, cir, def, level, origin, false);
+    }
+
     /**
      * Places a structure template at the given origin with a random rotation.
      *
@@ -377,9 +536,9 @@ public final class NbtTreePlacer {
 
         int cornerX, cornerZ;
         switch (rotation) {
-            case CLOCKWISE_90         -> { cornerX = -hz; cornerZ =  hx; }
+            case CLOCKWISE_90         -> { cornerX =  hz; cornerZ = -hx; }
             case CLOCKWISE_180        -> { cornerX =  hx; cornerZ =  hz; }
-            case COUNTERCLOCKWISE_90  -> { cornerX =  hz; cornerZ = -hx; }
+            case COUNTERCLOCKWISE_90  -> { cornerX = -hz; cornerZ =  hx; }
             default                   -> { cornerX = -hx; cornerZ = -hz; }
         }
 

@@ -203,6 +203,15 @@ public final class ConfigLoader {
             builder.maxY(maxY);
         }
 
+        if (obj.has("valid_floor")) {
+            String floorType = obj.get("valid_floor").getAsString();
+            switch (floorType) {
+                case "dirt" -> builder.onDirt();
+                case "nylium" -> builder.onNylium();
+                default -> Orchard.LOGGER.warn("[Orchard] Unknown valid_floor value '{}' – ignoring", floorType);
+            }
+        }
+
         return builder.build();
     }
 

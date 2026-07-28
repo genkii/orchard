@@ -94,6 +94,11 @@
           "type": "integer",
           "default": 0,
           "description": "Y offset for underground root placement"
+        },
+        "valid_floor": {
+          "type": "string",
+          "enum": ["dirt", "nylium"],
+          "description": "Require the origin block to be a specific type: 'dirt' (grassy/dirt blocks) or 'nylium' (nether floor)"
         }
       },
       "allOf": [

@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import de.minehackers.orchard.NbtTreePlacer;
 import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.OrchardRegistry;
 
@@ -23,7 +24,7 @@ import de.minehackers.orchard.OrchardRegistry;
  * <p>
  * Bone-meal mushrooms (small mushrooms on the ground) are skipped.
  * Ground validation ensures the origin is on dirt-family or mycelium.
- * Spacing, dimension, and Y-range checks are handled by {@link FeatureInterceptor}.
+ * Spacing, dimension, and Y-range checks are handled by {@link NbtTreePlacer}.
  */
 @Mixin(AbstractHugeMushroomFeature.class)
 public class HugeMushroomFeatureMixin {
@@ -37,7 +38,7 @@ public class HugeMushroomFeatureMixin {
         WorldGenLevel level = context.level();
         BlockPos origin = context.origin();
 
-        FeatureInterceptor.logFirstInterception(FeatureInterceptor.MUSHROOM_FIRED_ONCE,
+        NbtTreePlacer.logFirstInterception(NbtTreePlacer.MUSHROOM_FIRED_ONCE,
                 "[Orchard] HugeMushroomFeatureMixin active – origin=" + origin);
 
         BlockState originState = level.getBlockState(origin);
@@ -62,6 +63,6 @@ public class HugeMushroomFeatureMixin {
             return;
         }
 
-        FeatureInterceptor.interceptMushroom(context, cir, def, level, origin);
+        NbtTreePlacer.interceptMushroom(context, cir, def, level, origin);
     }
 }

@@ -23,9 +23,9 @@ import de.minehackers.orchard.OrchardRegistry;
  * user-defined NBT structure templates.
  * <p>
  * The mixin cancels vanilla placement at HEAD and delegates to
- * {@link FeatureInterceptor#interceptTree} after matching against
+ * {@link NbtTreePlacer#interceptTree} after matching against
  * registered definitions. Spacing, dimension, and Y-range checks
- * are handled by the interceptor.
+ * are handled by the placer.
  */
 @Mixin(TreeFeature.class)
 public class TreeFeatureMixin {
@@ -39,7 +39,7 @@ public class TreeFeatureMixin {
         WorldGenLevel level = context.level();
         BlockPos origin = context.origin();
 
-        FeatureInterceptor.logFirstInterception(FeatureInterceptor.TREE_FIRED_ONCE,
+        NbtTreePlacer.logFirstInterception(NbtTreePlacer.TREE_FIRED_ONCE,
                 "[Orchard] TreeFeatureMixin is active – first TreeFeature.place() intercepted.");
 
         Holder<Biome> biome = level.getBiome(origin);
@@ -55,8 +55,12 @@ public class TreeFeatureMixin {
             }
         }
 
-        origin = NbtTreePlacer.groundAdjust(level, origin, 2);
+        if (def.getValidFloor() != null && !def.getValidFloor().test(originState)) {
+            return;
+        }
 
-        FeatureInterceptor.interceptTree(context, cir, def, level, origin);
+        origin = NbtTreePlacer.groundAdjust(level, origin, NbtTreePlacer.getMaxGroundAdjust());
+
+        NbtTreePlacer.interceptTree(context, cir, def, level, origin);
     }
 }

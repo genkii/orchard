@@ -10,25 +10,22 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProc
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
-/**
- * Structure processor that prevents placement of blocks that would overwrite bedrock, lava, or air.
- */
 final class TerrainPreservingProcessor extends StructureProcessor {
 
-    static final TerrainPreservingProcessor INSTANCE = new TerrainPreservingProcessor();
+    static final TerrainPreservingProcessor INSTANCE = new TerrainPreservingProcessor(-1, -1);
 
-    /**
-     * Processes a block during structure placement, rejecting blocks that would overwrite
-     * bedrock, lava, or that are already air.
-     *
-     * @param level        the world reader
-     * @param offset       the offset position
-     * @param pivot        the pivot position
-     * @param originalInfo the original block info
-     * @param currentInfo  the current block info
-     * @param settings     the placement settings
-     * @return the current info if allowed, or {@code null} to skip placement
-     */
+    private final int chunkX;
+    private final int chunkZ;
+
+    private TerrainPreservingProcessor(int chunkX, int chunkZ) {
+        this.chunkX = chunkX;
+        this.chunkZ = chunkZ;
+    }
+
+    static TerrainPreservingProcessor forChunk(BlockPos origin) {
+        return new TerrainPreservingProcessor(origin.getX() >> 4, origin.getZ() >> 4);
+    }
+
     @Override
     public StructureTemplate.StructureBlockInfo processBlock(
             LevelReader level, BlockPos offset, BlockPos pivot,
@@ -37,18 +34,20 @@ final class TerrainPreservingProcessor extends StructureProcessor {
             StructurePlaceSettings settings) {
         if (currentInfo.state().isAir()) return null;
 
-        BlockState existing = level.getBlockState(currentInfo.pos());
+        BlockPos pos = currentInfo.pos();
+        if (chunkX >= 0 && chunkZ >= 0) {
+            int dx = Math.abs((pos.getX() >> 4) - chunkX);
+            int dz = Math.abs((pos.getZ() >> 4) - chunkZ);
+            if (dx > 1 || dz > 1) return null;
+        }
+
+        BlockState existing = level.getBlockState(pos);
         if (existing.is(Blocks.BEDROCK)) return null;
         if (existing.getFluidState().is(FluidTags.LAVA)) return null;
 
         return currentInfo;
     }
 
-    /**
-     * Returns the processor type, using the no-op type to avoid serialization overhead.
-     *
-     * @return the structure processor type
-     */
     @Override
     protected StructureProcessorType<?> getType() {
         return StructureProcessorType.NOP;

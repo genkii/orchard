@@ -5,8 +5,10 @@ import java.util.Set;
 import java.util.function.Predicate;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.HugeFungusConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
@@ -44,6 +46,7 @@ public final class OrchardDefinition {
     private final int originYOffset;
     private final int minY;
     private final int maxY;
+    private final Predicate<BlockState> validFloor;
 
     private OrchardDefinition(Builder b) {
         this.nbtFileName = b.nbtFileName;
@@ -59,6 +62,7 @@ public final class OrchardDefinition {
         this.originYOffset = b.originYOffset;
         this.minY = b.minY;
         this.maxY = b.maxY;
+        this.validFloor = b.validFloor;
     }
 
     public String getNbtFileName() {
@@ -91,6 +95,15 @@ public final class OrchardDefinition {
 
     public int getMaxY() {
         return maxY;
+    }
+
+    /**
+     * Returns the floor validation predicate, or {@code null} if none is set.
+     * When non-null, the origin block must match this predicate for placement to proceed.
+     */
+    @javax.annotation.Nullable
+    public Predicate<BlockState> getValidFloor() {
+        return validFloor;
     }
 
     /**
@@ -202,6 +215,7 @@ public final class OrchardDefinition {
         private int originYOffset = 0;
         private int minY = 0;
         private int maxY = 0;
+        private Predicate<BlockState> validFloor;
 
         private Builder(String nbtFileName, Path nbtDirectory) {
             if (nbtFileName == null || nbtFileName.isBlank()) {
@@ -338,6 +352,38 @@ public final class OrchardDefinition {
         public Builder maxY(int y) {
             this.maxY = y;
             return this;
+        }
+
+        /**
+         * Sets a floor validation predicate.
+         * When set, the origin block must match this predicate for placement to proceed.
+         *
+         * @param predicate the floor validation predicate
+         * @return this builder
+         */
+        public Builder validFloor(Predicate<BlockState> predicate) {
+            this.validFloor = predicate;
+            return this;
+        }
+
+        /**
+         * Shorthand for {@link #validFloor(Predicate)} that requires the floor to be dirt.
+         * Tests {@link BlockTags#DIRT}.
+         *
+         * @return this builder
+         */
+        public Builder onDirt() {
+            return validFloor(state -> state.is(BlockTags.DIRT));
+        }
+
+        /**
+         * Shorthand for {@link #validFloor(Predicate)} that requires the floor to be nylium.
+         * Tests {@link BlockTags#NYLIUM}.
+         *
+         * @return this builder
+         */
+        public Builder onNylium() {
+            return validFloor(state -> state.is(BlockTags.NYLIUM));
         }
 
         /**
