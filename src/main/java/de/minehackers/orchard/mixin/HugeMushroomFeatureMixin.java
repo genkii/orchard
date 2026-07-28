@@ -62,10 +62,6 @@ public class HugeMushroomFeatureMixin {
             return;
         }
 
-        if (def.getValidFloor() != null && !def.getValidFloor().test(groundState)) {
-            return;
-        }
-
         FeatureInterceptor.interceptMushroom(context, cir, def, level, origin);
     }
 }

@@ -55,10 +55,6 @@ public class TreeFeatureMixin {
             }
         }
 
-        if (def.getValidFloor() != null && !def.getValidFloor().test(originState)) {
-            return;
-        }
-
         origin = NbtTreePlacer.groundAdjust(level, origin, 2);
 
         FeatureInterceptor.interceptTree(context, cir, def, level, origin);

@@ -55,10 +55,12 @@ public final class ConfigLoader {
     private ConfigLoader() {}
 
     private static final java.util.regex.Pattern SAFE_NBT_FILENAME =
-            java.util.regex.Pattern.compile("^[a-zA-Z0-9_\\-\\.]+\\.nbt$");
+            java.util.regex.Pattern.compile("^[a-zA-Z0-9_\\-\\.]+(\\.nbt)?$");
 
     /**
      * Validates that an NBT filename is safe (no path traversal characters).
+     * Accepts names with or without the {@code .nbt} extension; the Builder
+     * appends it later if missing.
      *
      * @param fileName the filename to validate
      * @return true if the filename is safe

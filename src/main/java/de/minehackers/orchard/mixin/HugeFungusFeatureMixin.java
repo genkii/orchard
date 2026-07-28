@@ -56,12 +56,6 @@ public class HugeFungusFeatureMixin {
             return;
         }
 
-        BlockState baseState = originState.is(validBase) ? originState : belowState;
-
-        if (def.getValidFloor() != null && !def.getValidFloor().test(baseState)) {
-            return;
-        }
-
         FeatureInterceptor.interceptFungus(context, cir, def, level, origin);
     }
 }

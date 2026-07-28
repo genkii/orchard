@@ -5,10 +5,8 @@ import java.util.Set;
 import java.util.function.Predicate;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.HugeFungusConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
@@ -46,7 +44,6 @@ public final class OrchardDefinition {
     private final int originYOffset;
     private final int minY;
     private final int maxY;
-    private final Predicate<BlockState> validFloor;
 
     private OrchardDefinition(Builder b) {
         this.nbtFileName = b.nbtFileName;
@@ -62,7 +59,6 @@ public final class OrchardDefinition {
         this.originYOffset = b.originYOffset;
         this.minY = b.minY;
         this.maxY = b.maxY;
-        this.validFloor = b.validFloor;
     }
 
     public String getNbtFileName() {
@@ -95,14 +91,6 @@ public final class OrchardDefinition {
 
     public int getMaxY() {
         return maxY;
-    }
-
-    /**
-     * Returns the floor-validation predicate, or {@code null} when no floor
-     * check has been configured for this definition.
-     */
-    public Predicate<BlockState> getValidFloor() {
-        return validFloor;
     }
 
     /**
@@ -214,7 +202,6 @@ public final class OrchardDefinition {
         private int originYOffset = 0;
         private int minY = 0;
         private int maxY = 0;
-        private Predicate<BlockState> validFloor = null;
 
         private Builder(String nbtFileName, Path nbtDirectory) {
             if (nbtFileName == null || nbtFileName.isBlank()) {
@@ -351,43 +338,6 @@ public final class OrchardDefinition {
         public Builder maxY(int y) {
             this.maxY = y;
             return this;
-        }
-
-        /**
-         * Restricts placement to positions where the ground block satisfies
-         * {@code predicate}. For trees this is the surface block at the
-         * feature origin; for nether fungi it is the nylium/base block.
-         *
-         * <p>Use the shorthand helpers {@link #onNylium()} and {@link #onDirt()}
-         * for common cases, or supply any {@link Predicate}:
-         * <pre>{@code
-         *   .validFloor(state -> state.is(Blocks.WARPED_NYLIUM))
-         *   .validFloor(state -> state.is(Blocks.GRASS_BLOCK))
-         * }</pre>
-         *
-         * <p>This check is applied during world generation. Sapling growth
-         * is intentionally unaffected.
-         */
-        public Builder validFloor(Predicate<BlockState> predicate) {
-            this.validFloor = predicate;
-            return this;
-        }
-
-        /**
-         * Shorthand: only place on nylium (warped or crimson).
-         * Equivalent to {@code validFloor(state -> state.is(BlockTags.NYLIUM))}.
-         */
-        public Builder onNylium() {
-            return validFloor(state -> state.is(BlockTags.NYLIUM));
-        }
-
-        /**
-         * Shorthand: only place on dirt-like surface blocks
-         * (grass block, dirt, coarse dirt, podzol, rooted dirt, …).
-         * Equivalent to {@code validFloor(state -> state.is(BlockTags.DIRT))}.
-         */
-        public Builder onDirt() {
-            return validFloor(state -> state.is(BlockTags.DIRT));
         }
 
         /**
