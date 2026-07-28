@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -74,6 +75,19 @@ final class FeatureInterceptor {
         }
 
         if (!def.matchesYRange(origin.getY())) {
+            return;
+        }
+
+        BlockState originState = level.getBlockState(origin);
+        if (originState.liquid()) {
+            return;
+        }
+        if (originState.isSolid()) {
+            return;
+        }
+
+        BlockState belowState = level.getBlockState(origin.below());
+        if (belowState.isAir() || belowState.liquid()) {
             return;
         }
 

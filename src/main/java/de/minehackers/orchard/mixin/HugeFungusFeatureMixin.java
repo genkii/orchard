@@ -4,6 +4,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.HugeFungusConfiguration;
 import net.minecraft.world.level.levelgen.feature.HugeFungusFeature;
@@ -44,6 +46,21 @@ public class HugeFungusFeatureMixin {
         OrchardDefinition def =
                 OrchardRegistry.pickByFungusWorldGen(config, biome, context.random());
         if (def == null) return;
+
+        Block validBase = config.validBaseState.getBlock();
+        BlockState originState = level.getBlockState(origin);
+        BlockState belowState = level.getBlockState(origin.below());
+
+        if (!originState.is(validBase) && !belowState.is(validBase)) {
+            cir.setReturnValue(false);
+            return;
+        }
+
+        BlockState baseState = originState.is(validBase) ? originState : belowState;
+
+        if (def.getValidFloor() != null && !def.getValidFloor().test(baseState)) {
+            return;
+        }
 
         FeatureInterceptor.interceptFungus(context, cir, def, level, origin);
     }
