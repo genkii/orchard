@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Orchard Tree Definition",
+  "description": "Defines a custom NBT structure to replace vanilla trees, fungi, or mushrooms during world generation. Place files in config/orchard/data/",
+  "oneOf": [
+    { "$ref": "#/$defs/definition" },
+    {
+      "type": "array",
+      "items": { "$ref": "#/$defs/definition" },
+      "minItems": 1
+    }
+  ],
+  "$defs": {
+    "definition": {
+      "type": "object",
+      "required": ["nbt"],
+      "properties": {
+        "nbt": {
+          "type": "string",
+          "description": "NBT filename (placed in config/orchard/nbt/). Only alphanumeric, hyphens, underscores, and dots allowed.",
+          "pattern": "^[a-zA-Z0-9_\\-\\.]+\\.nbt$"
+        },
+        "tree_type": {
+          "oneOf": [
+            { "$ref": "#/$defs/treeTypeString" },
+            { "$ref": "#/$defs/treeTypeObject" },
+            {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  { "$ref": "#/$defs/treeTypeString" },
+                  { "$ref": "#/$defs/treeTypeObject" }
+                ]
+              },
+              "minItems": 1
+            }
+          ],
+          "description": "Which vanilla tree to replace. At least one of tree_type, fungus_type, or mushroom_type is required."
+        },
+        "fungus_type": {
+          "oneOf": [
+            { "$ref": "#/$defs/fungusTypeString" },
+            {
+              "type": "array",
+              "items": { "$ref": "#/$defs/fungusTypeString" },
+              "minItems": 1
+            }
+          ],
+          "description": "Which vanilla fungus to replace."
+        },
+        "mushroom_type": {
+          "oneOf": [
+            { "$ref": "#/$defs/mushroomTypeString" },
+            {
+              "type": "array",
+              "items": { "$ref": "#/$defs/mushroomTypeString" },
+              "minItems": 1
+            }
+          ],
+          "description": "Which vanilla mushroom to replace."
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "Relative chance of being picked. Higher = more likely."
+        },
+        "rare": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only spawns ~2.5% of the time."
+        },
+        "min_spacing": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Minimum blocks between this and other trees of the same type."
+        },
+        "origin_y_offset": {
+          "type": "integer",
+          "default": 0,
+          "description": "Shift the structure up/down on placement."
+        },
+        "min_y": {
+          "type": "integer",
+          "default": 0,
+          "description": "Lowest Y level this can spawn at. 0 = no limit."
+        },
+        "max_y": {
+          "type": "integer",
+          "default": 0,
+          "description": "Highest Y level this can spawn at. 0 = no limit."
+        },
+        "biomes": {
+          "oneOf": [
+            { "$ref": "#/$defs/biomeString" },
+            { "$ref": "#/$defs/biomeFilter" },
+            {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  { "$ref": "#/$defs/biomeString" },
+                  { "$ref": "#/$defs/biomeFilter" }
+                ]
+              },
+              "minItems": 1
+            }
+          ],
+          "description": "Restrict to specific biomes. Omit = all biomes."
+        },
+        "dimensions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Restrict to specific dimensions (e.g. minecraft:overworld). Omit = all dimensions."
+        },
+        "valid_floor": {
+          "type": "string",
+          "enum": ["dirt", "nylium"],
+          "description": "Required block type under the tree."
+        }
+      },
+      "additionalProperties": false
+    },
+    "treeTypeString": {
+      "type": "string",
+      "enum": [
+        "oak", "fancy_oak", "birch", "spruce", "spruce_only", "pine",
+        "mega_pine", "mega_spruce", "jungle", "jungle_small", "jungle_mega",
+        "jungle_bush", "acacia", "dark_oak", "cherry", "swamp", "azalea", "mangrove"
+      ],
+      "description": "Vanilla tree type to match."
+    },
+    "treeTypeObject": {
+      "type": "object",
+      "description": "Match by foliage, trunk, or trunk block. All fields optional, combined with AND.",
+      "properties": {
+        "foliage": {
+          "type": "string",
+          "enum": [
+            "blob", "fancy", "spruce", "pine", "mega_pine", "mega_jungle",
+            "bush", "acacia", "dark_oak", "cherry", "random_spread"
+          ],
+          "description": "Foliage placer type."
+        },
+        "trunk": {
+          "type": "string",
+          "enum": ["dark_oak", "forking", "giant", "mega_jungle", "upwards_branching"],
+          "description": "Trunk placer type."
+        },
+        "trunk_block": {
+          "type": "string",
+          "description": "Specific trunk block ID (e.g. minecraft:oak_log)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "fungusTypeString": {
+      "type": "string",
+      "enum": ["warped", "crimson", "any"],
+      "description": "Vanilla fungus type to match."
+    },
+    "mushroomTypeString": {
+      "type": "string",
+      "enum": ["red", "brown", "any"],
+      "description": "Vanilla mushroom type to match."
+    },
+    "biomeString": {
+      "type": "string",
+      "description": "Biome name or #tag name.",
+      "anyOf": [
+        {
+          "enum": [
+            "plains", "sunflower_plains", "meadow", "snowy_plains", "forest",
+            "flower_forest", "birch_forest", "old_growth_birch_forest", "dark_forest",
+            "windswept_forest", "taiga", "snowy_taiga", "old_growth_pine_taiga",
+            "old_growth_spruce_taiga", "jungle", "sparse_jungle", "bamboo_jungle",
+            "savanna", "savanna_plateau", "windswept_savanna", "windswept_hills",
+            "windswept_gravelly_hills", "grove", "swamp", "mangrove_swamp",
+            "cherry_grove", "mushroom_fields", "lush_caves", "crimson_forest",
+            "warped_forest", "nether_wastes", "soul_sand_valley", "basalt_deltas",
+            "#is_forest", "#is_taiga", "#is_jungle", "#is_savanna", "#is_badlands",
+            "#is_ocean", "#is_river", "#is_beach", "#is_overworld", "#is_nether",
+            "#is_end", "#snowy_spruce_biomes", "#non_snowy_taiga", "#pine_biomes"
+          ]
+        },
+        { "pattern": "^#?[a-z0-9_]+:[a-z0-9_/]+$" }
+      ]
+    },
+    "biomeFilter": {
+      "type": "object",
+      "description": "Advanced biome filter with logical combinators.",
+      "properties": {
+        "any_of": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/biomeString" },
+              { "$ref": "#/$defs/biomeFilter" }
+            ]
+          },
+          "minItems": 1,
+          "description": "Match if ANY of the entries match (OR)."
+        },
+        "all_of": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/biomeString" },
+              { "$ref": "#/$defs/biomeFilter" }
+            ]
+          },
+          "minItems": 1,
+          "description": "Match if ALL of the entries match (AND)."
+        },
+        "not": {
+          "oneOf": [
+            { "$ref": "#/$defs/biomeString" },
+            { "$ref": "#/$defs/biomeFilter" }
+          ],
+          "description": "Match if the inner filter does NOT match."
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

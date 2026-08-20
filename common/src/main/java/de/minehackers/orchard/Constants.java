@@ -11,4 +11,5 @@ public final class Constants {
     public static final String MOD_ID = "orchard";
     public static final String MOD_NAME = "Orchard";
     public static final Logger LOG = LoggerFactory.getLogger(MOD_ID);
+    public static final long MAX_NBT_FILE_SIZE = 10 * 1024 * 1024;
 }

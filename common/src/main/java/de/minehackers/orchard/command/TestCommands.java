@@ -5,6 +5,7 @@ import com.mojang.brigadier.context.CommandContext;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
@@ -28,6 +29,7 @@ public final class TestCommands {
     private TestCommands() {}
 
     /// Places an NBT at the player position (centered on the structure).
+    /// Shows pre-placement check results so the user can diagnose world-gen issues.
     static int runTest(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         if (!src.isPlayer()) {
@@ -47,6 +49,17 @@ public final class TestCommands {
         if (name.endsWith(".nbt")) {
             name = name.substring(0, name.length() - 4);
         }
+
+        Rotation rotation = Rotation.NONE;
+        try {
+            String rotStr = StringArgumentType.getString(ctx, "rotation");
+            rotation = switch (rotStr.toLowerCase(Locale.ROOT)) {
+                case "clockwise_90" -> Rotation.CLOCKWISE_90;
+                case "clockwise_180" -> Rotation.CLOCKWISE_180;
+                case "counterclockwise_90" -> Rotation.COUNTERCLOCKWISE_90;
+                default -> Rotation.NONE;
+            };
+        } catch (Exception ignored) {}
 
         String fileName = name + ".nbt";
         Path nbtDir = OrchardCommon.getNbtDirectory();
@@ -71,23 +84,50 @@ public final class TestCommands {
             }
 
             Vec3i size = template.getSize();
-            BlockPos origin = player.blockPosition();
-            int hx = size.getX() / 2;
-            int hz = size.getZ() / 2;
-            origin = origin.offset(-hx, 0, -hz);
+            BlockPos playerPos = player.blockPosition();
+            BlockPos origin = playerPos.offset(-size.getX() / 2, 0, -size.getZ() / 2);
+
+            StatusCommands.send(src, "==============================");
+            StatusCommands.send(src, "  Test: " + fileName);
+            StatusCommands.send(src, "  Size: " + size.getX() + "x" + size.getY() + "x" + size.getZ());
+            StatusCommands.send(src, "  Rotation: " + rotation.name().toLowerCase(Locale.ROOT));
+            StatusCommands.send(src, "==============================");
+
+            StatusCommands.send(src, "Pre-placement checks:");
+            boolean surface = NbtTreePlacer.isOnSurface(level, origin);
+            StatusCommands.send(src, "  Surface: " + (surface ? "PASS" : "FAIL (not on open air)"));
+
+            boolean trunkClear = NbtTreePlacer.isTrunkClear(level, origin, size.getY());
+            StatusCommands.send(src, "  Trunk clear: " + (trunkClear ? "PASS" : "FAIL (bedrock/lava in column)"));
+
+            boolean placementClear = NbtTreePlacer.isPlacementClear(level, origin, size);
+            StatusCommands.send(src, "  Area clear: " + (placementClear ? "PASS" : "FAIL (too many obstructions)"));
+
+            boolean groundOk = true;
+            BlockPos adjusted = NbtTreePlacer.groundAdjust(level, origin, NbtTreePlacer.getMaxGroundAdjust());
+            if (!adjusted.equals(origin)) {
+                StatusCommands.send(src, "  Ground adjust: " + origin.getY() + " -> " + adjusted.getY());
+                origin = adjusted;
+                groundOk = NbtTreePlacer.isOnSurface(level, origin);
+                StatusCommands.send(src, "  Surface after adjust: " + (groundOk ? "PASS" : "FAIL"));
+            } else {
+                StatusCommands.send(src, "  Ground adjust: none needed");
+            }
+
+            StatusCommands.send(src, "==============================");
 
             StructurePlaceSettings settings = new StructurePlaceSettings()
                 .setMirror(Mirror.NONE)
-                .setRotation(Rotation.NONE)
+                .setRotation(rotation)
                 .setIgnoreEntities(true)
                 .addProcessor(NbtTreePlacer.getTerrainPreservingProcessor());
 
             template.placeInWorld(level, origin, BlockPos.ZERO, settings, level.getRandom(), 3);
 
-            StatusCommands.send(src, "Placed " + fileName);
-            StatusCommands.send(src, "Size: " + size.getX() + "x" + size.getY() + "x" + size.getZ());
-            StatusCommands.send(src, "At: " + player.blockPosition());
-            Constants.LOG.info("[Orchard] Debug placement: {} at {}", fileName, player.blockPosition());
+            StatusCommands.send(src, "Placed at: " + origin);
+            StatusCommands.send(src, "==============================");
+            Constants.LOG.info("[Orchard] Debug placement: {} at {} (rotation: {})",
+                    fileName, origin, rotation.name());
             return 1;
         } catch (Exception e) {
             StatusCommands.sendError(src, "Failed to place: " + e.getMessage());
@@ -96,15 +136,13 @@ public final class TestCommands {
         }
     }
 
-    private static final long MAX_NBT_FILE_SIZE = 10 * 1024 * 1024;
-
     /// Loads and parses an NBT template from disk.
     static StructureTemplate loadTemplate(Path filePath, ServerLevel level) {
         try {
             long fileSize = Files.size(filePath);
-            if (fileSize > MAX_NBT_FILE_SIZE) {
+            if (fileSize > Constants.MAX_NBT_FILE_SIZE) {
                 Constants.LOG.error("[Orchard] NBT file too large: {} ({} bytes, max {} bytes)",
-                        filePath.getFileName(), fileSize, MAX_NBT_FILE_SIZE);
+                        filePath.getFileName(), fileSize, Constants.MAX_NBT_FILE_SIZE);
                 return null;
             }
             if (fileSize == 0) {

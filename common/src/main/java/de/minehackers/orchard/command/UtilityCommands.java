@@ -23,25 +23,63 @@ public final class UtilityCommands {
 
     private UtilityCommands() {}
 
-    /// Reloads all definitions from disk and clears the cache.
+    /// Reloads all definitions from disk with validation, then applies if valid.
     static int runReload(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         Path configDir = OrchardCommon.getConfigDirectory();
+        Path nbtDir = OrchardCommon.getNbtDirectory();
 
+        List<OrchardDefinition> defs;
         try {
-            List<OrchardDefinition> defs = ConfigLoader.loadAll(configDir);
-            OrchardRegistry.clearAndRegisterAll(defs);
-            NbtTreePlacer.clearCache();
-
-            int count = OrchardRegistry.getAll().size();
-            StatusCommands.send(src, "Reloaded " + count + " definition(s) from disk. Cache cleared.");
-            Constants.LOG.info("[Orchard] Reloaded {} definition(s) via command.", count);
-            return count;
+            defs = ConfigLoader.loadAll(configDir);
         } catch (Exception e) {
-            StatusCommands.sendError(src, "Reload failed: " + e.getMessage());
-            Constants.LOG.error("[Orchard] Reload failed: {}", e.getMessage());
+            StatusCommands.sendError(src, "Failed to load configs: " + e.getMessage());
+            Constants.LOG.error("[Orchard] Reload load failed: {}", e.getMessage());
             return 0;
         }
+
+        StatusCommands.send(src, "Validating " + defs.size() + " definition(s)...");
+
+        int warnings = 0;
+        int errors = 0;
+
+        for (OrchardDefinition def : defs) {
+            Path filePath = nbtDir.resolve(def.getNbtFileName());
+            if (!Files.exists(filePath)) {
+                StatusCommands.sendError(src, "  MISSING: " + def.getNbtFileName());
+                errors++;
+            } else {
+                try {
+                    long size = Files.size(filePath);
+                    if (size == 0) {
+                        StatusCommands.sendError(src, "  EMPTY: " + def.getNbtFileName());
+                        errors++;
+                    } else if (size > Constants.MAX_NBT_FILE_SIZE) {
+                        StatusCommands.sendError(src, "  TOO LARGE: " + def.getNbtFileName()
+                            + " (" + size + " bytes)");
+                        errors++;
+                    }
+                } catch (Exception e) {
+                    StatusCommands.sendError(src, "  UNREADABLE: " + def.getNbtFileName());
+                    errors++;
+                }
+            }
+        }
+
+        if (errors > 0) {
+            StatusCommands.sendError(src, errors + " error(s) found. Reload aborted to prevent issues.");
+            StatusCommands.send(src, "Fix the issues above and try again.");
+            Constants.LOG.warn("[Orchard] Reload aborted: {} error(s) in definitions.", errors);
+            return 0;
+        }
+
+        OrchardRegistry.clearAndRegisterAll(defs);
+        NbtTreePlacer.clearCache();
+
+        StatusCommands.send(src, "Reloaded " + defs.size() + " definition(s) successfully."
+            + (warnings > 0 ? " (" + warnings + " warning(s))" : ""));
+        Constants.LOG.info("[Orchard] Reloaded {} definition(s) via command.", defs.size());
+        return defs.size();
     }
 
     static int runClearCache(CommandContext<CommandSourceStack> ctx) {

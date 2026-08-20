@@ -14,21 +14,11 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 /// Won't overwrite bedrock, lava, or air blocks.
 final class TerrainPreservingProcessor implements StructureProcessor {
 
-    static final TerrainPreservingProcessor INSTANCE = new TerrainPreservingProcessor(-1, -1);
+    static final TerrainPreservingProcessor INSTANCE = new TerrainPreservingProcessor();
 
     private static final MapCodec<TerrainPreservingProcessor> CODEC = MapCodec.unit(() -> INSTANCE);
 
-    private final int chunkX;
-    private final int chunkZ;
-
-    private TerrainPreservingProcessor(int chunkX, int chunkZ) {
-        this.chunkX = chunkX;
-        this.chunkZ = chunkZ;
-    }
-
-    static TerrainPreservingProcessor forChunk(BlockPos origin) {
-        return new TerrainPreservingProcessor(origin.getX() >> 4, origin.getZ() >> 4);
-    }
+    private TerrainPreservingProcessor() {}
 
     @Override
     public StructureTemplate.StructureBlockInfo processBlock(
@@ -38,14 +28,7 @@ final class TerrainPreservingProcessor implements StructureProcessor {
             StructurePlaceSettings settings) {
         if (processedBlockInfo.state().isAir()) return null;
 
-        BlockPos pos = processedBlockInfo.pos();
-        if (chunkX >= 0 && chunkZ >= 0) {
-            int dx = Math.abs((pos.getX() >> 4) - chunkX);
-            int dz = Math.abs((pos.getZ() >> 4) - chunkZ);
-            if (dx > 1 || dz > 1) return null;
-        }
-
-        BlockState existing = level.getBlockState(pos);
+        BlockState existing = level.getBlockState(processedBlockInfo.pos());
         if (existing.is(Blocks.BEDROCK)) return null;
         if (existing.getFluidState().is(FluidTags.LAVA)) return null;
 

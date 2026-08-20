@@ -59,6 +59,7 @@ public final class StatusCommands {
 
         send(src, "");
         send(src, "NBT directory: " + nbtDir);
+        send(src, "Template cache: " + NbtTreePlacer.getCacheStats());
         send(src, "Rare pool probability: " + String.format("%.1f%%", OrchardRegistry.getRarePoolProbability() * 100));
         send(src, "Max obstructed fraction: " + String.format("%.0f%%", NbtTreePlacer.getMaxObstructedFraction() * 100));
 

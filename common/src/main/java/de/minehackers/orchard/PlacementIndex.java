@@ -2,11 +2,14 @@ package de.minehackers.orchard;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.core.BlockPos;
 
 /// Chunk-indexed spatial tracking for placed tree positions.
+/// Inner maps are partitioned by NBT path so queries skip irrelevant placements.
 /// Auto-prunes chunks older than 30 minutes every 4096 placements.
 final class PlacementIndex {
 
@@ -14,9 +17,10 @@ final class PlacementIndex {
 
     private static final int PLACEMENTS_BETWEEN_PRUNES = 4096;
     private static final long CHUNK_MAX_AGE_MS = 30L * 60 * 1000;
-    private static volatile int placementCounter = 0;
+    private static final AtomicInteger placementCounter = new AtomicInteger();
 
-    private static final ConcurrentMap<Long, ConcurrentHashMap<Long, String>> CHUNK_INDEX =
+    /// chunkKey -> (nbtPath -> set of packed block positions)
+    private static final ConcurrentMap<Long, ConcurrentHashMap<String, Set<Long>>> CHUNK_INDEX =
             new ConcurrentHashMap<>(64);
     private static final ConcurrentMap<Long, Long> CHUNK_ACCESS_TIMES =
             new ConcurrentHashMap<>(64);
@@ -24,11 +28,12 @@ final class PlacementIndex {
     public static void markPlaced(String nbtPath, BlockPos origin) {
         long chunkKey = chunkKey(origin);
         CHUNK_INDEX.computeIfAbsent(chunkKey, k -> new ConcurrentHashMap<>(4))
-                .put(origin.asLong(), nbtPath);
+                .computeIfAbsent(nbtPath, k -> ConcurrentHashMap.newKeySet())
+                .add(origin.asLong());
         CHUNK_ACCESS_TIMES.put(chunkKey, System.currentTimeMillis());
 
-        if (++placementCounter >= PLACEMENTS_BETWEEN_PRUNES) {
-            placementCounter = 0;
+        if (placementCounter.incrementAndGet() >= PLACEMENTS_BETWEEN_PRUNES) {
+            placementCounter.set(0);
             pruneStaleChunks(System.currentTimeMillis());
         }
     }
@@ -43,18 +48,15 @@ final class PlacementIndex {
         for (int cx = originChunkX - chunkRadius; cx <= originChunkX + chunkRadius; cx++) {
             for (int cz = originChunkZ - chunkRadius; cz <= originChunkZ + chunkRadius; cz++) {
                 long chunkKey = chunkKey(cx, cz);
-                ConcurrentHashMap<Long, String> chunk = CHUNK_INDEX.get(chunkKey);
+                ConcurrentHashMap<String, Set<Long>> chunk = CHUNK_INDEX.get(chunkKey);
                 if (chunk == null) continue;
 
-                for (Map.Entry<Long, String> entry : chunk.entrySet()) {
-                    long packed = entry.getKey();
-                    String entryPath = entry.getValue();
-                    if (!entryPath.equals(nbtPath)) continue;
+                Set<Long> positions = chunk.get(nbtPath);
+                if (positions == null) continue;
 
-                    int px = BlockPos.getX(packed);
-                    int pz = BlockPos.getZ(packed);
-                    long dx = px - origin.getX();
-                    long dz = pz - origin.getZ();
+                for (long packed : positions) {
+                    long dx = BlockPos.getX(packed) - origin.getX();
+                    long dz = BlockPos.getZ(packed) - origin.getZ();
                     if (dx * dx + dz * dz <= r2) return true;
                 }
             }
@@ -65,7 +67,19 @@ final class PlacementIndex {
     public static void clear() {
         CHUNK_INDEX.clear();
         CHUNK_ACCESS_TIMES.clear();
-        placementCounter = 0;
+        placementCounter.set(0);
+    }
+
+    /// Returns a "chunks=N, tracked_placements=N" summary string.
+    public static String getStats() {
+        int chunks = CHUNK_INDEX.size();
+        int placements = 0;
+        for (ConcurrentHashMap<String, Set<Long>> chunk : CHUNK_INDEX.values()) {
+            for (Set<Long> positions : chunk.values()) {
+                placements += positions.size();
+            }
+        }
+        return "chunks=" + chunks + ", tracked_placements=" + placements;
     }
 
     /// Evicts chunks whose last access is older than the max age.

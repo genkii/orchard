@@ -27,8 +27,9 @@ All commands are run in-game and require operator permissions.
 | -------------------------- | --------------------------------------------------------------------------------------- |
 | `/orchard reload`          | Reloads all config files from disk                                                      |
 | `/orchard status`          | Shows all registered tree definitions, whether their NBT files exist, and their weights |
+| `/orchard stats`           | Shows runtime statistics (cache hits, placements, etc.)                                 |
 | `/orchard list`            | Lists all loaded definitions with their full properties                                 |
-| `/orchard test <name>`     | Places a structure at your position                                                     |
+| `/orchard test <name>`     | Places a structure at your position (with optional rotation)                            |
 | `/orchard what`            | Shows your current biome and which definitions would match                              |
 | `/orchard find <query>`    | Searches through all definitions and NBT files by name                                  |
 | `/orchard validate`        | Checks all your config files for parsing errors                                         |
@@ -97,7 +98,7 @@ Premade configs are available on our Discord server
 
 ## Other Versions
 
-**Currently, Orchard supports NeoForge only.** Support for Fabric and newer Minecraft versions is planned. If you'd like to help accelerate development, contributions are always welcome!
+Orchard supports both **NeoForge** and **Fabric** for Minecraft 26.2. JARs for both loaders are included in the `bundled/` directory.
 
 ## Mod Recommendations
 

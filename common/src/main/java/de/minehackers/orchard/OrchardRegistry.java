@@ -3,7 +3,7 @@ package de.minehackers.orchard;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.StampedLock;
 import net.minecraft.core.Holder;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
@@ -14,6 +14,7 @@ import net.minecraft.world.level.levelgen.feature.configurations.TreeConfigurati
 import org.jspecify.annotations.Nullable;
 
 /// Thread-safe global registry for orchard definitions.
+/// Uses StampedLock with optimistic reads for zero-overhead reads on the world-gen hot path.
 /// Definitions are split into tree/fungus/mushroom lists so pickBy* only iterates what it needs.
 public final class OrchardRegistry {
 
@@ -21,77 +22,79 @@ public final class OrchardRegistry {
 
     private static final float DEFAULT_RARE_POOL_PROBABILITY = 0.025f;
     private static volatile float rarePoolProbability = DEFAULT_RARE_POOL_PROBABILITY;
-    private static final ReentrantReadWriteLock LOCK = new ReentrantReadWriteLock();
+    private static final StampedLock LOCK = new StampedLock();
 
-    private static List<OrchardDefinition> definitions = Collections.emptyList();
-    private static List<OrchardDefinition> treeDefs = Collections.emptyList();
-    private static List<OrchardDefinition> fungusDefs = Collections.emptyList();
-    private static List<OrchardDefinition> mushroomDefs = Collections.emptyList();
+    private static volatile List<OrchardDefinition> definitions = Collections.emptyList();
+    private static volatile List<OrchardDefinition> treeDefs = Collections.emptyList();
+    private static volatile List<OrchardDefinition> fungusDefs = Collections.emptyList();
+    private static volatile List<OrchardDefinition> mushroomDefs = Collections.emptyList();
+
+    /// ThreadLocal pooled candidate list to avoid allocation on every pick call.
+    private static final ThreadLocal<List<OrchardDefinition>> POOL = ThreadLocal.withInitial(() -> new ArrayList<>(4));
 
     public static void register(OrchardDefinition definition) {
-        LOCK.writeLock().lock();
+        long stamp = LOCK.writeLock();
         try {
             var list = new ArrayList<>(definitions);
             list.add(definition);
             apply(list);
         } finally {
-            LOCK.writeLock().unlock();
+            LOCK.unlockWrite(stamp);
         }
     }
 
     public static void registerAll(List<OrchardDefinition> newDefs) {
-        LOCK.writeLock().lock();
+        long stamp = LOCK.writeLock();
         try {
             var list = new ArrayList<>(definitions);
             list.addAll(newDefs);
             apply(list);
         } finally {
-            LOCK.writeLock().unlock();
+            LOCK.unlockWrite(stamp);
         }
     }
 
     public static void clearAndRegisterAll(List<OrchardDefinition> newDefs) {
-        LOCK.writeLock().lock();
+        long stamp = LOCK.writeLock();
         try {
             apply(List.copyOf(newDefs));
         } finally {
-            LOCK.writeLock().unlock();
+            LOCK.unlockWrite(stamp);
         }
     }
 
     public static void clear() {
-        LOCK.writeLock().lock();
+        long stamp = LOCK.writeLock();
         try {
             apply(Collections.emptyList());
         } finally {
-            LOCK.writeLock().unlock();
+            LOCK.unlockWrite(stamp);
         }
     }
 
     public static List<OrchardDefinition> getAll() {
-        LOCK.readLock().lock();
-        try {
-            return definitions;
-        } finally {
-            LOCK.readLock().unlock();
+        long stamp = LOCK.tryOptimisticRead();
+        List<OrchardDefinition> result = definitions;
+        if (!LOCK.validate(stamp)) {
+            stamp = LOCK.readLock();
+            try {
+                result = definitions;
+            } finally {
+                LOCK.unlockRead(stamp);
+            }
         }
+        return result;
     }
 
     /// Pick a tree definition matching config, biome, and level.
     @Nullable
     public static OrchardDefinition pickByWorldGen(
             TreeConfiguration config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
-        List<OrchardDefinition> snapshot;
-        LOCK.readLock().lock();
-        try {
-            snapshot = treeDefs;
-        } finally {
-            LOCK.readLock().unlock();
-        }
-        List<OrchardDefinition> pool = null;
+        List<OrchardDefinition> snapshot = treeDefs;
+        List<OrchardDefinition> pool = POOL.get();
+        pool.clear();
         for (OrchardDefinition def : snapshot) {
             if (def.matchesWorldGen(config, level) && def.matchesBiome(biome)) {
-                if (pool == null) pool = new ArrayList<>(4);
                 pool.add(def);
             }
         }
@@ -102,17 +105,11 @@ public final class OrchardRegistry {
     @Nullable
     public static OrchardDefinition pickByFungusWorldGen(
             HugeFungusConfiguration config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
-        List<OrchardDefinition> snapshot;
-        LOCK.readLock().lock();
-        try {
-            snapshot = fungusDefs;
-        } finally {
-            LOCK.readLock().unlock();
-        }
-        List<OrchardDefinition> pool = null;
+        List<OrchardDefinition> snapshot = fungusDefs;
+        List<OrchardDefinition> pool = POOL.get();
+        pool.clear();
         for (OrchardDefinition def : snapshot) {
             if (def.matchesFungusWorldGen(config, level) && def.matchesBiome(biome)) {
-                if (pool == null) pool = new ArrayList<>(4);
                 pool.add(def);
             }
         }
@@ -123,17 +120,11 @@ public final class OrchardRegistry {
     @Nullable
     public static OrchardDefinition pickByMushroomWorldGen(
             HugeMushroomFeatureConfiguration config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
-        List<OrchardDefinition> snapshot;
-        LOCK.readLock().lock();
-        try {
-            snapshot = mushroomDefs;
-        } finally {
-            LOCK.readLock().unlock();
-        }
-        List<OrchardDefinition> pool = null;
+        List<OrchardDefinition> snapshot = mushroomDefs;
+        List<OrchardDefinition> pool = POOL.get();
+        pool.clear();
         for (OrchardDefinition def : snapshot) {
             if (def.matchesMushroomWorldGen(config, level) && def.matchesBiome(biome)) {
-                if (pool == null) pool = new ArrayList<>(4);
                 pool.add(def);
             }
         }
@@ -142,9 +133,9 @@ public final class OrchardRegistry {
 
     /// Weighted random selection with a rare pool gate (2.5% by default).
     @Nullable
-    static OrchardDefinition pickWeighted(@Nullable List<OrchardDefinition> pool, RandomSource random) {
-        if (pool == null || pool.isEmpty()) return null;
+    static OrchardDefinition pickWeighted(List<OrchardDefinition> pool, RandomSource random) {
         int size = pool.size();
+        if (size == 0) return null;
         if (size == 1) return pool.get(0);
 
         boolean hasRare = false, hasNormal = false;
