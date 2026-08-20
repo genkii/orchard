@@ -60,6 +60,8 @@ public final class TreeMatchers {
     public static final BiPredicate<TreeConfiguration, WorldGenLevel> MEGA_SPRUCE = byTrunk(GiantTrunkPlacer.class)
             .and(byFoliage(SpruceFoliagePlacer.class));
 
+    public static final BiPredicate<TreeConfiguration, WorldGenLevel> JUNGLE = byTrunkBlock(Blocks.JUNGLE_LOG);
+
     public static final BiPredicate<TreeConfiguration, WorldGenLevel> JUNGLE_SMALL = byFoliage(BlobFoliagePlacer.class)
             .and(byTrunkBlock(Blocks.JUNGLE_LOG));
 

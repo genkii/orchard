@@ -83,6 +83,7 @@ final class TreeTypeParser {
             case "pine" -> TreeMatchers.PINE;
             case "mega_pine" -> TreeMatchers.MEGA_PINE;
             case "mega_spruce" -> TreeMatchers.MEGA_SPRUCE;
+            case "jungle" -> TreeMatchers.JUNGLE;
             case "jungle_small" -> TreeMatchers.JUNGLE_SMALL;
             case "jungle_mega" -> TreeMatchers.JUNGLE_MEGA;
             case "jungle_bush" -> TreeMatchers.JUNGLE_BUSH;
