@@ -11,6 +11,7 @@ public final class OrchardCommon {
 
     private static Path configDirectory;
     private static Path nbtDirectory;
+    private static Path generatedDirectory;
 
     private OrchardCommon() {}
 
@@ -21,11 +22,14 @@ public final class OrchardCommon {
         Path customTreeDir = configDir.resolve("orchard");
         Path nbtDir = customTreeDir.resolve("nbt");
         Path dataDir = customTreeDir.resolve("data");
+        Path genDir = customTreeDir.resolve("generated");
         nbtDirectory = nbtDir;
+        generatedDirectory = genDir;
 
         ensureDirectory(customTreeDir);
         ensureDirectory(nbtDir);
         ensureDirectory(dataDir);
+        ensureDirectory(genDir);
 
         DefaultConfigExtractor.extractIfEmpty(configDir);
 
@@ -54,6 +58,7 @@ public final class OrchardCommon {
 
         Constants.LOG.info("[Orchard] NBT dir: {}", nbtDir);
         Constants.LOG.info("[Orchard] Data dir: {}", dataDir);
+        Constants.LOG.info("[Orchard] Generated dir: {}", genDir);
         Constants.LOG.info("[Orchard] ========================================");
     }
 
@@ -69,6 +74,10 @@ public final class OrchardCommon {
 
     public static Path getNbtDirectory() {
         return nbtDirectory;
+    }
+
+    public static Path getGeneratedDirectory() {
+        return generatedDirectory;
     }
 
     private static void ensureDirectory(Path dir) {

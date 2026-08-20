@@ -58,6 +58,18 @@ public final class CommandRegistry {
                     )
                 )
                 .then(Commands.literal("stats").executes(StatsCommands::runStats))
+                .then(
+                    Commands.literal("create").then(
+                        Commands.argument("name", StringArgumentType.word())
+                            .then(
+                                Commands.argument("pos1", net.minecraft.commands.arguments.coordinates.BlockPosArgument.blockPos())
+                                    .then(
+                                        Commands.argument("pos2", net.minecraft.commands.arguments.coordinates.BlockPosArgument.blockPos())
+                                            .executes(CreateCommands::runCreate)
+                                    )
+                            )
+                    )
+                )
                 .then(Commands.literal("list").executes(StatusCommands::runList))
                 .then(Commands.literal("reload").executes(UtilityCommands::runReload))
                 .then(Commands.literal("clearcache").executes(UtilityCommands::runClearCache))

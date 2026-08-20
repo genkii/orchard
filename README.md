@@ -29,6 +29,7 @@ All commands are run in-game and require operator permissions.
 | `/orchard status`          | Shows all registered tree definitions, whether their NBT files exist, and their weights |
 | `/orchard stats`           | Shows runtime statistics (cache hits, placements, etc.)                                 |
 | `/orchard list`            | Lists all loaded definitions with their full properties                                 |
+| `/orchard create <name> <pos1> <pos2>` | Captures a region and saves it as an NBT file in `config/orchard/generated/` |
 | `/orchard test <name>`     | Places a structure at your position (with optional rotation)                            |
 | `/orchard what`            | Shows your current biome and which definitions would match                              |
 | `/orchard find <query>`    | Searches through all definitions and NBT files by name                                  |
@@ -38,15 +39,24 @@ All commands are run in-game and require operator permissions.
 
 ## Getting Started
 
-Orchard makes it easy to get started adding custom trees to your world. You simply install the mod and put it into your mod folder and start creating designs.
+Orchard makes it easy to get started adding custom trees to your world.
 
-**1. Setup The Folder**
+**Quick start (in-game):**
+
+1. Build your tree in creative mode
+2. Run `/orchard create my_tree <pos1> <pos2>` to capture it as an NBT file
+3. Move the file from `config/orchard/generated/` to `config/orchard/nbt/`
+4. Create a JSON config in `config/orchard/data/` (see below)
+5. Run `/orchard reload` to apply
+
+**Manual setup:**
 
 Orchard loads your trees from:
 
 ```text
-config/orchard/nbt/
-config/orchard/data/
+config/orchard/nbt/         <- place your .nbt files here
+config/orchard/data/        <- place your .json configs here
+config/orchard/generated/   <- /orchard create saves here (staging area)
 ```
 
 All your `.nbt` files should be put in `nbt/` and all the `.json` configs should be put in `data/`
