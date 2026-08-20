@@ -27,6 +27,8 @@ public final class OrchardCommon {
         ensureDirectory(nbtDir);
         ensureDirectory(dataDir);
 
+        DefaultConfigExtractor.extractIfEmpty(configDir);
+
         List<OrchardDefinition> definitions = ConfigLoader.loadAll(configDir);
         OrchardRegistry.clearAndRegisterAll(definitions);
 

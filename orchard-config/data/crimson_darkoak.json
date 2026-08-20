@@ -1,0 +1,51 @@
+[
+    {
+      "nbt": "darkoak1.nbt",
+      "tree_type": "dark_oak",
+      "biomes": ["dark_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "darkoak3.nbt",
+      "tree_type": "dark_oak",
+      "biomes": ["dark_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "darkoak4.nbt",
+      "tree_type": "dark_oak",
+      "biomes": ["dark_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "darkoak5.nbt",
+      "tree_type": "dark_oak",
+      "biomes": ["dark_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "darkoak6.nbt",
+      "tree_type": "dark_oak",
+      "biomes": ["dark_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "darkoak7.nbt",
+      "tree_type": "dark_oak",
+      "biomes": ["dark_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "darkoak8.nbt",
+      "tree_type": "dark_oak",
+      "biomes": ["dark_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    }
+]

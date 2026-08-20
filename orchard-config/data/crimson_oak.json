@@ -1,0 +1,100 @@
+[
+    {
+      "nbt": "forestbirch3.nbt",
+      "tree_type": "birch",
+      "biomes": {"any_of": ["forest", "flower_forest"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "forestbirch4.nbt",
+      "tree_type": "birch",
+      "biomes": {"any_of": ["forest", "flower_forest"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "forestbrich1.nbt",
+      "tree_type": "birch",
+      "biomes": {"any_of": ["forest", "flower_forest"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "forestbrich2.nbt",
+      "tree_type": "birch",
+      "biomes": {"any_of": ["forest", "flower_forest"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oak18.nbt",
+      "tree_type": "oak",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oak1.nbt",
+      "tree_type": "oak",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oak2.nbt",
+      "tree_type": "oak",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oak3.nbt",
+      "tree_type": "oak",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oak6.nbt",
+      "tree_type": "oak",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oak7.nbt",
+      "tree_type": "oak",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oak8.nbt",
+      "tree_type": "oak",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "swampoak1.nbt",
+      "tree_type": "swamp",
+      "biomes": ["swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "swampoak2.nbt",
+      "tree_type": "swamp",
+      "biomes": ["swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "swampoak3.nbt",
+      "tree_type": "swamp",
+      "biomes": ["swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "swampoak5.nbt",
+      "tree_type": "swamp",
+      "biomes": ["swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    }
+]

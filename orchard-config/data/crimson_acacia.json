@@ -1,0 +1,30 @@
+[
+    {
+      "nbt": "acacia1.nbt",
+      "tree_type": "acacia",
+      "biomes": "#is_savanna",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "acacia2.nbt",
+      "tree_type": "acacia",
+      "biomes": "#is_savanna",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "acacia3.nbt",
+      "tree_type": "acacia",
+      "biomes": "#is_savanna",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "acacia4.nbt",
+      "tree_type": "acacia",
+      "biomes": "#is_savanna",
+      "weight": 1,
+      "min_spacing": 8
+    }
+]

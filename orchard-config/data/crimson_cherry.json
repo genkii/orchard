@@ -1,0 +1,32 @@
+[
+    {
+      "nbt": "cherry1.nbt",
+      "tree_type": "cherry",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "cherry2.nbt",
+      "tree_type": "cherry",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "cherry4.nbt",
+      "tree_type": "cherry",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "cherry5.nbt",
+      "tree_type": "cherry",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "cherry6.nbt",
+      "tree_type": "cherry",
+      "weight": 1,
+      "min_spacing": 8
+    }
+]

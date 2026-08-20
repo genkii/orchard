@@ -1,0 +1,191 @@
+[
+    {
+      "nbt": "bee_birch1.nbt",
+      "tree_type": "birch",
+      "biomes": ["flower_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bee_birch2.nbt",
+      "tree_type": "birch",
+      "biomes": ["flower_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bee_birch3.nbt",
+      "tree_type": "birch",
+      "biomes": ["flower_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree10.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree11.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree12.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree1.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree2.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree3.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree4.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree5.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree6.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree7.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree8.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "birchtree9.nbt",
+      "tree_type": "birch",
+      "biomes": {"not": {"any_of": ["old_growth_birch_forest", "forest", "flower_forest"]}},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "old_bee_birch1.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "old_bee_birch2.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "old_bee_birch3.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oldbirch1.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oldbirch2.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oldbirch3.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oldbirch4.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oldbirch5.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oldbirch6.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oldbirch7.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oldbirch8.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "oldbirch9.nbt",
+      "tree_type": "birch",
+      "biomes": ["old_growth_birch_forest"],
+      "weight": 1,
+      "min_spacing": 8
+    }
+]

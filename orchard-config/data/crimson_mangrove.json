@@ -1,0 +1,58 @@
+[
+    {
+      "nbt": "mangrove1.nbt",
+      "tree_type": "mangrove",
+      "biomes": ["mangrove_swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "mangrove2.nbt",
+      "tree_type": "mangrove",
+      "biomes": ["mangrove_swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "mangrove3.nbt",
+      "tree_type": "mangrove",
+      "biomes": ["mangrove_swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "mangrove4.nbt",
+      "tree_type": "mangrove",
+      "biomes": ["mangrove_swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "mangrove5.nbt",
+      "tree_type": "mangrove",
+      "biomes": ["mangrove_swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "mangrove6.nbt",
+      "tree_type": "mangrove",
+      "biomes": ["mangrove_swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "mangrove7.nbt",
+      "tree_type": "mangrove",
+      "biomes": ["mangrove_swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "mangrove8.nbt",
+      "tree_type": "mangrove",
+      "biomes": ["mangrove_swamp"],
+      "weight": 1,
+      "min_spacing": 8
+    }
+]

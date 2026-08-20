@@ -1,0 +1,170 @@
+[
+    {
+      "nbt": "bigspruce1.nbt",
+      "tree_type": ["pine", "mega_pine", "mega_spruce"],
+      "biomes": {"any_of": ["#is_taiga", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bigspruce2.nbt",
+      "tree_type": ["pine", "mega_pine", "mega_spruce"],
+      "biomes": {"any_of": ["#is_taiga", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bigspruce3.nbt",
+      "tree_type": ["pine", "mega_pine", "mega_spruce"],
+      "biomes": {"any_of": ["#is_taiga", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bigspruce4.nbt",
+      "tree_type": ["pine", "mega_pine", "mega_spruce"],
+      "biomes": {"any_of": ["#is_taiga", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bigspruce5.nbt",
+      "tree_type": ["pine", "mega_pine", "mega_spruce"],
+      "biomes": {"any_of": ["#is_taiga", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "snowyspruce10.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["snowy_taiga", "snowy_plains", "windswept_hills", "windswept_forest", "windswept_gravelly_hills", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "snowyspruce1.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["snowy_taiga", "snowy_plains", "windswept_hills", "windswept_forest", "windswept_gravelly_hills", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "snowyspruce2.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["snowy_taiga", "snowy_plains", "windswept_hills", "windswept_forest", "windswept_gravelly_hills", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "snowyspruce3.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["snowy_taiga", "snowy_plains", "windswept_hills", "windswept_forest", "windswept_gravelly_hills", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "snowyspruce4.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["snowy_taiga", "snowy_plains", "windswept_hills", "windswept_forest", "windswept_gravelly_hills", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "snowyspruce5.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["snowy_taiga", "snowy_plains", "windswept_hills", "windswept_forest", "windswept_gravelly_hills", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "snowyspruce6.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["snowy_taiga", "snowy_plains", "windswept_hills", "windswept_forest", "windswept_gravelly_hills", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "snowyspruce7.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["snowy_taiga", "snowy_plains", "windswept_hills", "windswept_forest", "windswept_gravelly_hills", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "snowyspruce8.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["snowy_taiga", "snowy_plains", "windswept_hills", "windswept_forest", "windswept_gravelly_hills", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "snowyspruce9.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["snowy_taiga", "snowy_plains", "windswept_hills", "windswept_forest", "windswept_gravelly_hills", "grove"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "spruce6.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["taiga", "old_growth_pine_taiga", "old_growth_spruce_taiga"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "sprucetree1.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["taiga", "old_growth_pine_taiga", "old_growth_spruce_taiga"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "sprucetree2.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["taiga", "old_growth_pine_taiga", "old_growth_spruce_taiga"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "sprucetree3.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["taiga", "old_growth_pine_taiga", "old_growth_spruce_taiga"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "sprucetree4.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["taiga", "old_growth_pine_taiga", "old_growth_spruce_taiga"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "sprucetree5.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["taiga", "old_growth_pine_taiga", "old_growth_spruce_taiga"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "sprucetree7.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["taiga", "old_growth_pine_taiga", "old_growth_spruce_taiga"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "sprucetree8.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["taiga", "old_growth_pine_taiga", "old_growth_spruce_taiga"]},
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "sprucetree9.nbt",
+      "tree_type": "spruce_only",
+      "biomes": {"any_of": ["taiga", "old_growth_pine_taiga", "old_growth_spruce_taiga"]},
+      "weight": 1,
+      "min_spacing": 8
+    }
+]

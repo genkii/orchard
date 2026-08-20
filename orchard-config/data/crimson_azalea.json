@@ -1,0 +1,32 @@
+[
+    {
+      "nbt": "azalea1.nbt",
+      "tree_type": "azalea",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "azalea2.nbt",
+      "tree_type": "azalea",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "azalea3.nbt",
+      "tree_type": "azalea",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "azalea4.nbt",
+      "tree_type": "azalea",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "azalea5.nbt",
+      "tree_type": "azalea",
+      "weight": 1,
+      "min_spacing": 8
+    }
+]

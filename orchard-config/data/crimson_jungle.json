@@ -1,0 +1,114 @@
+[
+    {
+      "nbt": "bigjungletree1.nbt",
+      "tree_type": "jungle_mega",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bigjungletree2.nbt",
+      "tree_type": "jungle_mega",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bigjungletree3.nbt",
+      "tree_type": "jungle_mega",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bigjungletree4.nbt",
+      "tree_type": "jungle_mega",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bigjungletree5.nbt",
+      "tree_type": "jungle_mega",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bigjungletree6.nbt",
+      "tree_type": "jungle_mega",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "bigjungletree7.nbt",
+      "tree_type": "jungle_mega",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "jungletree1.nbt",
+      "tree_type": "jungle_small",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "jungletree2.nbt",
+      "tree_type": "jungle_small",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "jungletree3.nbt",
+      "tree_type": "jungle_small",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "jungletree4.nbt",
+      "tree_type": "jungle_small",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "jungletree5.nbt",
+      "tree_type": "jungle_small",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "jungletree6.nbt",
+      "tree_type": "jungle_small",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "jungletree7.nbt",
+      "tree_type": "jungle_small",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "jungletree8.nbt",
+      "tree_type": "jungle_small",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    },
+    {
+      "nbt": "jungletree9.nbt",
+      "tree_type": "jungle_small",
+      "biomes": "#is_jungle",
+      "weight": 1,
+      "min_spacing": 8
+    }
+]
