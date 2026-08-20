@@ -22,8 +22,6 @@ import de.minehackers.orchard.OrchardRegistry;
 @Mixin(HugeFungusFeature.class)
 public class HugeFungusFeatureMixin {
 
-    private HugeFungusFeatureMixin() {}
-
     @Inject(method = "place", at = @At("HEAD"), cancellable = true)
     private void onPlace(
             FeaturePlaceContext<HugeFungusConfiguration> context,

@@ -23,8 +23,6 @@ import de.minehackers.orchard.OrchardRegistry;
 @Mixin(AbstractHugeMushroomFeature.class)
 public class HugeMushroomFeatureMixin {
 
-    private HugeMushroomFeatureMixin() {}
-
     @Inject(method = "place", at = @At("HEAD"), cancellable = true)
     private void onPlace(
             FeaturePlaceContext<HugeMushroomFeatureConfiguration> context,

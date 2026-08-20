@@ -22,8 +22,6 @@ import de.minehackers.orchard.OrchardRegistry;
 @Mixin(TreeFeature.class)
 public class TreeFeatureMixin {
 
-    private TreeFeatureMixin() {}
-
     @Inject(method = "place", at = @At("HEAD"), cancellable = true)
     private void onPlace(
             FeaturePlaceContext<TreeConfiguration> context,

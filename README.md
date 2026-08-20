@@ -29,7 +29,6 @@ All commands are run in-game and require operator permissions.
 | `/orchard status`          | Shows all registered tree definitions, whether their NBT files exist, and their weights |
 | `/orchard list`            | Lists all loaded definitions with their full properties                                 |
 | `/orchard test <name>`     | Places a structure at your position                                                     |
-| `/orchard place <name>`    | Places a tree at your position                                                          |
 | `/orchard what`            | Shows your current biome and which definitions would match                              |
 | `/orchard find <query>`    | Searches through all definitions and NBT files by name                                  |
 | `/orchard validate`        | Checks all your config files for parsing errors                                         |

@@ -22,7 +22,7 @@ import de.minehackers.orchard.Constants;
 import de.minehackers.orchard.NbtTreePlacer;
 import de.minehackers.orchard.OrchardCommon;
 
-/// /orchard test and /orchard place commands.
+/// /orchard test command.
 public final class TestCommands {
 
     private TestCommands() {}
@@ -92,69 +92,6 @@ public final class TestCommands {
         } catch (Exception e) {
             StatusCommands.sendError(src, "Failed to place: " + e.getMessage());
             Constants.LOG.error("[Orchard] Debug test failed for {}: {}", fileName, e.getMessage());
-            return 0;
-        }
-    }
-
-    /// Places an NBT at the player's exact position (no centering).
-    static int runPlace(CommandContext<CommandSourceStack> ctx) {
-        CommandSourceStack src = ctx.getSource();
-        if (!src.isPlayer()) {
-            StatusCommands.sendError(src, "This command must be run by a player.");
-            return 0;
-        }
-
-        ServerPlayer player;
-        try {
-            player = src.getPlayerOrException();
-        } catch (Exception e) {
-            StatusCommands.sendError(src, "Failed to get player.");
-            return 0;
-        }
-
-        String name = StringArgumentType.getString(ctx, "name");
-        if (name.endsWith(".nbt")) {
-            name = name.substring(0, name.length() - 4);
-        }
-
-        String fileName = name + ".nbt";
-        Path nbtDir = OrchardCommon.getNbtDirectory();
-        Path filePath = nbtDir.resolve(fileName);
-
-        if (!Files.exists(filePath)) {
-            StatusCommands.sendError(src, "NBT file not found: " + fileName);
-            return 0;
-        }
-
-        if (!(player.level() instanceof ServerLevel level)) {
-            StatusCommands.sendError(src, "Must be in a server level.");
-            return 0;
-        }
-
-        try {
-            StructureTemplate template = loadTemplate(filePath, level);
-            if (template == null) {
-                StatusCommands.sendError(src, "Failed to parse NBT file: " + fileName);
-                return 0;
-            }
-
-            Vec3i size = template.getSize();
-            BlockPos origin = player.blockPosition();
-
-            StructurePlaceSettings settings = new StructurePlaceSettings()
-                .setMirror(Mirror.NONE)
-                .setRotation(Rotation.NONE)
-                .setIgnoreEntities(true)
-                .addProcessor(NbtTreePlacer.getTerrainPreservingProcessor());
-
-            template.placeInWorld(level, origin, BlockPos.ZERO, settings, level.getRandom(), 3);
-
-            StatusCommands.send(src, "Placed " + fileName + " at " + origin);
-            StatusCommands.send(src, "Size: " + size.getX() + "x" + size.getY() + "x" + size.getZ());
-            Constants.LOG.info("[Orchard] Debug placement: {} at {}", fileName, origin);
-            return 1;
-        } catch (Exception e) {
-            StatusCommands.sendError(src, "Failed to place: " + e.getMessage());
             return 0;
         }
     }

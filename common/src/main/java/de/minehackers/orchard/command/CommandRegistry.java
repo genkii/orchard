@@ -40,12 +40,6 @@ public final class CommandRegistry {
                         )
                     )
                 )
-                .then(
-                    Commands.literal("place").then(
-                        Commands.argument("name", StringArgumentType.word())
-                            .executes(TestCommands::runPlace)
-                    )
-                )
         );
     }
 }
