@@ -50,6 +50,13 @@ echo "  Bundled $MANIFEST_COUNT file(s) (data + nbt)"
 echo "[4/4] Building Fabric and NeoForge JARs..."
 cd "$TEMP_DIR/orchard"
 
+# Append -BUNDLED suffix to version for bundled builds only
+VERSION=$(grep '^version=' gradle.properties | cut -d= -f2)
+if [[ "$VERSION" != *-BUNDLED ]]; then
+    sed -i "s/^version=.*/version=${VERSION}-BUNDLED/" gradle.properties
+fi
+echo "  Version: ${VERSION%-BUNDLED}-BUNDLED"
+
 ./gradlew :fabric:build :neoforge:build --no-daemon -q 2>&1 | tail -5
 
 # 5. Collect output
