@@ -25,7 +25,7 @@ cp -r "$SRC_DIR" "$TEMP_DIR/orchard"
 
 # 2. Copy config files into resources
 echo "[2/4] Bundling config files..."
-RESOURCE_DIR="$TEMP_DIR/orchard/common/src/main/resources/default-config/orchard"
+RESOURCE_DIR="$TEMP_DIR/orchard/common/src/main/resources/default-config"
 mkdir -p "$RESOURCE_DIR/data" "$RESOURCE_DIR/nbt"
 
 cp "$CONFIG_DIR"/data/*.json "$RESOURCE_DIR/data/"
@@ -37,10 +37,10 @@ MANIFEST="$TEMP_DIR/orchard/common/src/main/resources/default-config/manifest.tx
 : > "$MANIFEST"
 
 for f in "$RESOURCE_DIR"/data/*.json; do
-    echo "default-config/orchard/data/$(basename "$f")" >> "$MANIFEST"
+    echo "default-config/data/$(basename "$f")" >> "$MANIFEST"
 done
 for f in "$RESOURCE_DIR"/nbt/*.nbt; do
-    echo "default-config/orchard/nbt/$(basename "$f")" >> "$MANIFEST"
+    echo "default-config/nbt/$(basename "$f")" >> "$MANIFEST"
 done
 
 MANIFEST_COUNT=$(wc -l < "$MANIFEST")
