@@ -28,12 +28,18 @@ import net.minecraft.world.level.levelgen.feature.trunkplacers.MegaJungleTrunkPl
 import net.minecraft.world.level.levelgen.feature.trunkplacers.TrunkPlacer;
 import net.minecraft.world.level.levelgen.feature.trunkplacers.UpwardsBranchingTrunkPlacer;
 
-/// Tree, fungus, and mushroom matching predicates used by the config parsers.
+/// Ready-made matchers the config parsers use to recognise specific tree,
+/// fungus and mushroom types.
 public final class TreeMatchers {
 
     private TreeMatchers() {}
 
-    private static final RandomSource FIXED_RANDOM = RandomSource.create(0L);
+    /// Throwaway RandomSource for sampling block state providers. Deliberately
+    /// NOT the feature's own random: matching must never perturb the world's
+    /// random stream. ThreadLocal because worldgen runs on worker threads and
+    /// RandomSource is not thread-safe.
+    private static final ThreadLocal<RandomSource> FIXED_RANDOM =
+            ThreadLocal.withInitial(() -> RandomSource.create(0L));
 
     // --- Overworld tree matchers ---
 
@@ -46,10 +52,10 @@ public final class TreeMatchers {
     public static final BiPredicate<TreeConfiguration, WorldGenLevel> BIRCH = byFoliage(BlobFoliagePlacer.class)
             .and(byTrunkBlock(Blocks.BIRCH_LOG));
 
-    /// All spruce trees including mega spruce.
+    /// Every spruce, mega variants included.
     public static final BiPredicate<TreeConfiguration, WorldGenLevel> SPRUCE = byFoliage(SpruceFoliagePlacer.class);
 
-    /// Spruce trees but not the giant trunk mega ones.
+    /// Regular spruces only, giant mega trunks excluded.
     public static final BiPredicate<TreeConfiguration, WorldGenLevel> SPRUCE_ONLY = byFoliage(SpruceFoliagePlacer.class)
             .and(byTrunk(GiantTrunkPlacer.class).negate());
 
@@ -76,7 +82,7 @@ public final class TreeMatchers {
 
     public static final BiPredicate<TreeConfiguration, WorldGenLevel> CHERRY = byFoliage(CherryFoliagePlacer.class);
 
-    /// Swamp tree: blob foliage + oak log + vines present.
+    /// Swamp oak: oak log with blob foliage that keeps its vines.
     public static final BiPredicate<TreeConfiguration, WorldGenLevel> SWAMP = byFoliage(BlobFoliagePlacer.class)
             .and(byTrunkBlock(Blocks.OAK_LOG))
             .and((config, level) -> !config.ignoreVines);
@@ -102,7 +108,7 @@ public final class TreeMatchers {
 
     public static final BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> RED_MUSHROOM = (config, level) -> {
         try {
-            return config.capProvider().getState(level, FIXED_RANDOM, BlockPos.ZERO)
+            return config.capProvider().getState(level, FIXED_RANDOM.get(), BlockPos.ZERO)
                     .is(Blocks.RED_MUSHROOM_BLOCK);
         } catch (Exception e) {
             return false;
@@ -111,7 +117,7 @@ public final class TreeMatchers {
 
     public static final BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> BROWN_MUSHROOM = (config, level) -> {
         try {
-            return config.capProvider().getState(level, FIXED_RANDOM, BlockPos.ZERO)
+            return config.capProvider().getState(level, FIXED_RANDOM.get(), BlockPos.ZERO)
                     .is(Blocks.BROWN_MUSHROOM_BLOCK);
         } catch (Exception e) {
             return false;
@@ -123,7 +129,7 @@ public final class TreeMatchers {
 
     // --- Utility combinators ---
 
-    /// OR: matches if any of the given matchers matches.
+    /// Matches when any child matcher does.
     @SafeVarargs
     public static BiPredicate<TreeConfiguration, WorldGenLevel> any(BiPredicate<TreeConfiguration, WorldGenLevel>... matchers) {
         return (config, level) -> {
@@ -134,21 +140,20 @@ public final class TreeMatchers {
         };
     }
 
-    /// Matches configs whose foliage placer is an instance of the given class.
     public static BiPredicate<TreeConfiguration, WorldGenLevel> byFoliage(Class<? extends FoliagePlacer> cls) {
         return (config, level) -> cls.isInstance(config.foliagePlacer);
     }
 
-    /// Matches configs whose trunk placer is an instance of the given class.
     public static BiPredicate<TreeConfiguration, WorldGenLevel> byTrunk(Class<? extends TrunkPlacer> cls) {
         return (config, level) -> cls.isInstance(config.trunkPlacer);
     }
 
-    /// Matches configs whose trunk provider produces the given block. Returns false on error.
+    /// Samples the trunk provider and compares against the block. A sampling
+    /// error counts as "not a match".
     public static BiPredicate<TreeConfiguration, WorldGenLevel> byTrunkBlock(Block block) {
         return (config, level) -> {
             try {
-                return config.trunkProvider.getState(level, FIXED_RANDOM, BlockPos.ZERO).is(block);
+                return config.trunkProvider.getState(level, FIXED_RANDOM.get(), BlockPos.ZERO).is(block);
             } catch (Exception e) {
                 return false;
             }

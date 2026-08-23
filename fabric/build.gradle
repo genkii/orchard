@@ -2,10 +2,22 @@ plugins {
     id 'multiloader-loader'
     id 'net.fabricmc.fabric-loom'
 }
+repositories {
+    maven {
+        name = 'Terraformers'
+        url = 'https://maven.terraformersmc.com/'
+    }
+}
+
 dependencies {
     minecraft("com.mojang:minecraft:${minecraft_version}")
     implementation("net.fabricmc:fabric-loader:${fabric_loader_version}")
     implementation("net.fabricmc.fabric-api:fabric-api:${fabric_version}")
+    // Embed the YAML parser into the mod JAR (Fabric Jar-in-Jar)
+    include("org.yaml:snakeyaml:${snakeyaml_version}")
+    // Mod Menu - compile against its Java API only; optional at runtime and
+    // Fabric-only. MC 26.1+ mods ship unmapped, so a plain dependency works.
+    implementation("com.terraformersmc:modmenu:${modmenu_version}")
 }
 
 loom {

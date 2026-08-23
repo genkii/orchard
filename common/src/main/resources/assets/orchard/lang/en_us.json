@@ -1,3 +1,14 @@
 {
-  "orchard.configuration.title": "Orchard Config"
+  "modmenu.nameTranslation.orchard": "Orchard",
+  "modmenu.summaryTranslation.orchard": "Replace vanilla trees, fungi and mushrooms with your own NBT structures.",
+  "modmenu.descriptionTranslation.orchard": "Custom tree generation using NBT structure templates. Replaces vanilla trees, huge fungi, and huge mushrooms with user-defined NBT files - server-side only, works on any client, with pack support, biome filters and modded-tree overrides.",
+
+  "orchard.config.title": "Orchard",
+  "orchard.config.done": "Done",
+  "orchard.config.about": "Orchard replaces world-generated trees with NBT structures.",
+  "orchard.config.location": "It is configured on the server: config/orchard/",
+  "orchard.config.header.commands": "Useful commands (operator):",
+  "orchard.config.command.packs": "/orchard packs - list and switch packs",
+  "orchard.config.command.create": "/orchard create <name> <pos1> <pos2> - capture a tree",
+  "orchard.config.command.reload": "/orchard reload - apply config changes"
 }

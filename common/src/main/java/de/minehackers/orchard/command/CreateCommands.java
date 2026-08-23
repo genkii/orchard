@@ -20,12 +20,14 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 import de.minehackers.orchard.Constants;
 import de.minehackers.orchard.OrchardCommon;
 
-/// /orchard create command - exports a world region as an NBT structure file.
+/// The /orchard create subcommand - captures a region of the world into an
+/// NBT file that can later become a tree definition.
 public final class CreateCommands {
 
     private CreateCommands() {}
 
-    /// Captures the region between two positions and saves it as an NBT file.
+    /// Copies the box between pos1 and pos2 (inclusive) into a fresh template
+    /// and writes it compressed to the generated directory.
     static int runCreate(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         if (!src.isPlayer()) {
@@ -95,7 +97,7 @@ public final class CreateCommands {
 
             CompoundTag nbt = template.save(new CompoundTag());
             Vec3i actualSize = template.getSize();
-            int blockCount = template.filterBlocks(origin, new StructurePlaceSettings(),
+            int blockCount = template.filterBlocks(BlockPos.ZERO, new StructurePlaceSettings(),
                 null).size();
 
             try (OutputStream out = Files.newOutputStream(filePath)) {
@@ -112,8 +114,8 @@ public final class CreateCommands {
             StatusCommands.send(src, "  Saved to: " + generatedDir.resolve(fileName));
             StatusCommands.send(src, "");
             StatusCommands.send(src, "Next steps:");
-            StatusCommands.send(src, "  1. Move to config/orchard/nbt/ when ready");
-            StatusCommands.send(src, "  2. Create a JSON config in config/orchard/data/");
+            StatusCommands.send(src, "  1. Move it into a pack's nbt/ folder (config/orchard/packs/<pack>/nbt/)");
+            StatusCommands.send(src, "  2. Add a definition to that pack's data/ folder (e.g. data/trees.yaml)");
             StatusCommands.send(src, "  3. Run /orchard reload");
             StatusCommands.send(src, "==============================");
 

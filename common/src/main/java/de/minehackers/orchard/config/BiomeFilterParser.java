@@ -1,87 +1,123 @@
 package de.minehackers.orchard.config;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
-import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
-import de.minehackers.orchard.Constants;
+import org.jetbrains.annotations.Nullable;
 import de.minehackers.orchard.matchers.BiomeMatchers;
+import de.minehackers.orchard.pack.DynamicReferences;
+import de.minehackers.orchard.pack.PackLoadException;
 
-/// Parses biomes JSON fields into biome-matching predicates.
+/// Compiles biomes selectors into biome-matching predicates. Accepts shorthand
+/// vanilla names (forest, plains, ...), tags prefixed with # (#minecraft:is_forest,
+/// or just #is_forest for the minecraft namespace), full biome ids, the
+/// any_of/all_of/not combinator mappings, and plain lists (treated as any_of).
+/// Biome and tag ids are reported to the given collector for existence checks
+/// at server start; unknown ids only cost a warning, never the whole pack.
 final class BiomeFilterParser {
 
     private BiomeFilterParser() {}
 
-    @SuppressWarnings("unchecked")
-    @Nullable
-    public static Predicate<Holder<Biome>> parseBiomeFilter(JsonElement element) {
-        if (element.isJsonPrimitive()) {
-            String value = element.getAsString();
-            if (value.startsWith("#")) {
-                String tagName = value.substring(1);
-                TagKey<Biome> tag = TagKey.create(
-                        Registries.BIOME,
-                        Identifier.parse(tagName));
-                return BiomeMatchers.hasTag(tag);
-            }
-            return resolveBiome(value);
+    static Predicate<Holder<Biome>> parse(Object node, @Nullable DynamicReferences.Builder refs, String where) {
+        if (node instanceof String s) {
+            return resolveName(s.trim(), refs, where);
         }
-
-        if (element.isJsonObject()) {
-            JsonObject obj = element.getAsJsonObject();
-
-            if (obj.has("any_of")) {
-                List<Predicate<Holder<Biome>>> predicates = new ArrayList<>();
-                JsonArray arr = obj.getAsJsonArray("any_of");
-                for (JsonElement e : arr) {
-                    Predicate<Holder<Biome>> p = parseBiomeFilter(e);
-                    if (p != null) predicates.add(p);
-                }
-                if (predicates.isEmpty()) return null;
-                return BiomeMatchers.any(predicates.toArray(new Predicate[0]));
-            }
-
-            if (obj.has("all_of")) {
-                List<Predicate<Holder<Biome>>> predicates = new ArrayList<>();
-                JsonArray arr = obj.getAsJsonArray("all_of");
-                for (JsonElement e : arr) {
-                    Predicate<Holder<Biome>> p = parseBiomeFilter(e);
-                    if (p != null) predicates.add(p);
-                }
-                if (predicates.isEmpty()) return null;
-                return BiomeMatchers.all(predicates.toArray(new Predicate[0]));
-            }
-
-            if (obj.has("not")) {
-                Predicate<Holder<Biome>> inner = parseBiomeFilter(obj.get("not"));
-                if (inner != null) return inner.negate();
-            }
+        if (node instanceof Map<?, ?> map) {
+            return parseObject(map, refs, where);
         }
-
-        if (element.isJsonArray()) {
-            List<Predicate<Holder<Biome>>> predicates = new ArrayList<>();
-            for (JsonElement e : element.getAsJsonArray()) {
-                Predicate<Holder<Biome>> p = parseBiomeFilter(e);
-                if (p != null) predicates.add(p);
+        if (node instanceof List<?> list) {
+            List<Predicate<Holder<Biome>>> predicates = new ArrayList<>(list.size());
+            for (int i = 0; i < list.size(); i++) {
+                Object element = list.get(i);
+                if (element == null) continue;
+                predicates.add(parse(element, refs, where + "[" + i + "]"));
             }
-            if (predicates.isEmpty()) return null;
+            if (predicates.isEmpty()) {
+                throw new PackLoadException(where + ": biomes list must not be empty");
+            }
             return BiomeMatchers.any(predicates.toArray(new Predicate[0]));
         }
-
-        return null;
+        throw new PackLoadException(where + ": biomes must be text, a mapping, or a list");
     }
 
-    @Nullable
-    static Predicate<Holder<Biome>> resolveBiome(String name) {
-        return switch (name) {
+    private static Predicate<Holder<Biome>> parseObject(Map<?, ?> map, @Nullable DynamicReferences.Builder refs, String where) {
+        if (map.size() != 1) {
+            throw new PackLoadException(where
+                    + ": biome combinator mapping must have exactly one of 'any_of', 'all_of' or 'not'");
+        }
+        Map.Entry<?, ?> entry = map.entrySet().iterator().next();
+        String key = String.valueOf(entry.getKey());
+
+        return switch (key) {
+            case "any_of" -> anyOf(entry.getValue(), refs, where);
+            case "all_of" -> allOf(entry.getValue(), refs, where);
+            case "not" -> {
+                Predicate<Holder<Biome>> inner =
+                        parse(requireChild(entry.getValue(), "'not'"), refs, where + ".not");
+                yield inner.negate();
+            }
+            default -> throw new PackLoadException(where + ": unknown biome filter '" + key
+                    + "' (expected 'any_of', 'all_of' or 'not')");
+        };
+    }
+
+    private static Object requireChild(Object value, String field) {
+        if (value == null) {
+            throw new PackLoadException("biomes " + field + " requires a value");
+        }
+        return value;
+    }
+
+    private static Predicate<Holder<Biome>> anyOf(Object value, @Nullable DynamicReferences.Builder refs, String where) {
+        List<?> raw = YamlValues.asList(value, where + " 'any_of'");
+        List<Predicate<Holder<Biome>>> predicates = new ArrayList<>(raw.size());
+        for (int i = 0; i < raw.size(); i++) {
+            Object element = raw.get(i);
+            if (element == null) continue;
+            predicates.add(parse(element, refs, where + ".any_of[" + i + "]"));
+        }
+        if (predicates.isEmpty()) {
+            throw new PackLoadException(where + ": 'any_of' must not be empty");
+        }
+        return predicates.size() == 1 ? predicates.get(0)
+                : BiomeMatchers.any(predicates.toArray(new Predicate[0]));
+    }
+
+    private static Predicate<Holder<Biome>> allOf(Object value, @Nullable DynamicReferences.Builder refs, String where) {
+        List<?> raw = YamlValues.asList(value, where + " 'all_of'");
+        List<Predicate<Holder<Biome>>> predicates = new ArrayList<>(raw.size());
+        for (int i = 0; i < raw.size(); i++) {
+            Object element = raw.get(i);
+            if (element == null) continue;
+            predicates.add(parse(element, refs, where + ".all_of[" + i + "]"));
+        }
+        if (predicates.isEmpty()) {
+            throw new PackLoadException(where + ": 'all_of' must not be empty");
+        }
+        return predicates.size() == 1 ? predicates.get(0)
+                : BiomeMatchers.all(predicates.toArray(new Predicate[0]));
+    }
+
+    /// Handles the string form: shorthand names, #tags, and full biome ids.
+    static Predicate<Holder<Biome>> resolveName(String name, @Nullable DynamicReferences.Builder refs, String where) {
+        if (name.startsWith("#")) {
+            return resolveTag(name.substring(1), refs, where);
+        }
+        if (name.indexOf(':') >= 0) {
+            Identifier id = TreeTypeParser.parseIdentifier(name, where);
+            if (refs != null) refs.addBiome(id);
+            ResourceKey<Biome> key = ResourceKey.create(Registries.BIOME, id);
+            return biome -> biome.is(key);
+        }
+
+        Predicate<Holder<Biome>> matcher = switch (name) {
             case "plains" -> BiomeMatchers.PLAINS;
             case "sunflower_plains" -> BiomeMatchers.SUNFLOWER_PLAINS;
             case "meadow" -> BiomeMatchers.MEADOW;
@@ -115,6 +151,12 @@ final class BiomeFilterParser {
             case "nether_wastes" -> BiomeMatchers.NETHER_WASTES;
             case "soul_sand_valley" -> BiomeMatchers.SOUL_SAND_VALLEY;
             case "basalt_deltas" -> BiomeMatchers.BASALT_DELTAS;
+            default -> null;
+        };
+        if (matcher != null) return matcher;
+
+        // Group aliases like is_forest - backed by tags or combined matchers.
+        Predicate<Holder<Biome>> group = switch (name) {
             case "is_forest" -> BiomeMatchers.IS_FOREST;
             case "is_taiga" -> BiomeMatchers.IS_TAIGA;
             case "is_jungle" -> BiomeMatchers.IS_JUNGLE;
@@ -129,10 +171,23 @@ final class BiomeFilterParser {
             case "snowy_spruce_biomes" -> BiomeMatchers.SNOWY_SPRUCE_BIOMES;
             case "non_snowy_taiga" -> BiomeMatchers.NON_SNOWY_TAIGA;
             case "pine_biomes" -> BiomeMatchers.PINE_BIOMES;
-            default -> {
-                Constants.LOG.warn("[Orchard] Unknown biome: {}", name);
-                yield null;
-            }
+            default -> null;
         };
+        if (group != null) return group;
+
+        throw new PackLoadException(where + ": unknown biome '" + name
+                + "' - use a built-in name, '#tag', or a full id like 'minecraft:plains'");
+    }
+
+    private static Predicate<Holder<Biome>> resolveTag(String tagName, @Nullable DynamicReferences.Builder refs, String where) {
+        Identifier id;
+        if (tagName.indexOf(':') >= 0) {
+            id = TreeTypeParser.parseIdentifier(tagName, where);
+        } else {
+            // shorthands like #is_forest mean the minecraft namespace
+            id = Identifier.withDefaultNamespace(tagName);
+        }
+        TagKey<Biome> tag = TagKey.create(Registries.BIOME, id);
+        return biome -> biome.is(tag);
     }
 }

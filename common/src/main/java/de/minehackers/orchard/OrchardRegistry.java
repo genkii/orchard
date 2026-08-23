@@ -13,9 +13,10 @@ import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFea
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import org.jspecify.annotations.Nullable;
 
-/// Thread-safe global registry for orchard definitions.
-/// Uses StampedLock with optimistic reads for zero-overhead reads on the world-gen hot path.
-/// Definitions are split into tree/fungus/mushroom lists so pickBy* only iterates what it needs.
+/// Global registry of orchard definitions, safe to hit from multiple threads.
+/// Reads take the StampedLock optimistic path so worldgen pays essentially
+/// nothing, and definitions are partitioned by type so the pick methods only
+/// ever scan what they need.
 public final class OrchardRegistry {
 
     private OrchardRegistry() {}
@@ -29,7 +30,7 @@ public final class OrchardRegistry {
     private static volatile List<OrchardDefinition> fungusDefs = Collections.emptyList();
     private static volatile List<OrchardDefinition> mushroomDefs = Collections.emptyList();
 
-    /// ThreadLocal pooled candidate list to avoid allocation on every pick call.
+    // Per-thread candidate list, reused between pick calls to dodge allocations.
     private static final ThreadLocal<List<OrchardDefinition>> POOL = ThreadLocal.withInitial(() -> new ArrayList<>(4));
 
     public static void register(OrchardDefinition definition) {
@@ -86,7 +87,6 @@ public final class OrchardRegistry {
         return result;
     }
 
-    /// Pick a tree definition matching config, biome, and level.
     @Nullable
     public static OrchardDefinition pickByWorldGen(
             TreeConfiguration config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
@@ -101,7 +101,6 @@ public final class OrchardRegistry {
         return pickWeighted(pool, random);
     }
 
-    /// Pick a fungus definition matching config, biome, and level.
     @Nullable
     public static OrchardDefinition pickByFungusWorldGen(
             HugeFungusConfiguration config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
@@ -116,7 +115,6 @@ public final class OrchardRegistry {
         return pickWeighted(pool, random);
     }
 
-    /// Pick a mushroom definition matching config, biome, and level.
     @Nullable
     public static OrchardDefinition pickByMushroomWorldGen(
             HugeMushroomFeatureConfiguration config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
@@ -131,12 +129,13 @@ public final class OrchardRegistry {
         return pickWeighted(pool, random);
     }
 
-    /// Weighted random selection with a rare pool gate (2.5% by default).
+    /// Weighted random pick. Rare defs only enter through a small side pool
+    /// (2.5% chance), so marking one rare really keeps it rare even next to
+    /// common candidates - and even when it is the only candidate at all.
     @Nullable
     static OrchardDefinition pickWeighted(List<OrchardDefinition> pool, RandomSource random) {
         int size = pool.size();
         if (size == 0) return null;
-        if (size == 1) return pool.get(0);
 
         boolean hasRare = false, hasNormal = false;
         int rareTotalWeight = 0, normalTotalWeight = 0;
@@ -151,30 +150,46 @@ public final class OrchardRegistry {
             }
         }
 
-        final boolean useRare =
-                hasRare && (!hasNormal || random.nextFloat() < rarePoolProbability);
-        int totalWeight = useRare ? rareTotalWeight : normalTotalWeight;
+        boolean rollWon = random.nextFloat() < rarePoolProbability;
+        if (!hasRare) {
+            return pickFrom(pool, random, normalTotalWeight, false);
+        }
+        if (hasNormal) {
+            return rollWon
+                    ? pickFrom(pool, random, rareTotalWeight, true)
+                    : pickFrom(pool, random, normalTotalWeight, false);
+        }
+        // Only rare candidates: the probability gate still applies, and a
+        // lost roll means vanilla worldgen proceeds untouched.
+        return rollWon ? pickFrom(pool, random, rareTotalWeight, true) : null;
+    }
 
+    @Nullable
+    private static OrchardDefinition pickFrom(
+            List<OrchardDefinition> pool, RandomSource random, int totalWeight, boolean rare) {
+        int size = pool.size();
+
+        // Weights are validated >= 1 at parse time; this is just belt and braces.
         if (totalWeight <= 0) {
             for (int i = size - 1; i >= 0; i--) {
-                if (pool.get(i).isRare() == useRare) return pool.get(i);
+                if (pool.get(i).isRare() == rare) return pool.get(i);
             }
-            return pool.get(size - 1);
+            return null;
         }
 
         int roll = random.nextInt(totalWeight);
         int cumulative = 0;
         for (int i = 0; i < size; i++) {
             OrchardDefinition def = pool.get(i);
-            if (def.isRare() != useRare) continue;
+            if (def.isRare() != rare) continue;
             cumulative += def.getWeight();
             if (roll < cumulative) return def;
         }
 
         for (int i = size - 1; i >= 0; i--) {
-            if (pool.get(i).isRare() == useRare) return pool.get(i);
+            if (pool.get(i).isRare() == rare) return pool.get(i);
         }
-        return pool.get(size - 1);
+        return null;
     }
 
     public static float getRarePoolProbability() {
@@ -185,7 +200,7 @@ public final class OrchardRegistry {
         rarePoolProbability = Math.max(0f, Math.min(1f, probability));
     }
 
-    /// Rebuilds the type-partitioned lists from the full definitions.
+    /// Rebuilds the per-type partitions from the full definition list.
     private static void apply(List<OrchardDefinition> newDefs) {
         definitions = newDefs;
         var trees = new ArrayList<OrchardDefinition>();

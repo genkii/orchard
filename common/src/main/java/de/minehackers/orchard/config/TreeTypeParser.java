@@ -1,11 +1,9 @@
 package de.minehackers.orchard.config;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiPredicate;
-import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.WorldGenLevel;
@@ -17,64 +15,87 @@ import net.minecraft.world.level.levelgen.feature.trunkplacers.ForkingTrunkPlace
 import net.minecraft.world.level.levelgen.feature.trunkplacers.GiantTrunkPlacer;
 import net.minecraft.world.level.levelgen.feature.trunkplacers.MegaJungleTrunkPlacer;
 import net.minecraft.world.level.levelgen.feature.trunkplacers.UpwardsBranchingTrunkPlacer;
-import de.minehackers.orchard.Constants;
+import org.jetbrains.annotations.Nullable;
+import de.minehackers.orchard.matchers.FeatureIndex;
 import de.minehackers.orchard.matchers.TreeMatchers;
+import de.minehackers.orchard.pack.DynamicReferences;
+import de.minehackers.orchard.pack.PackLoadException;
 
-/// Parses tree_type JSON fields into tree-matching predicates.
+/// Compiles tree_type selectors into tree-matching predicates. Accepts a
+/// shorthand name (oak, birch, ...), a configured-feature id for vanilla or
+/// modded trees (minecraft:fancy_oak, some-mod:some_tree), a filter mapping
+/// (foliage/trunk/trunk_block), or a list mixing any of those - a list matches
+/// if any entry matches. Feature ids land in the DynamicReferences collector so
+/// their existence gets checked once registries are available.
 final class TreeTypeParser {
 
     private TreeTypeParser() {}
 
-    @Nullable
-    static BiPredicate<TreeConfiguration, WorldGenLevel> parseTreeType(JsonElement element) {
-        if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
-            return resolveTreeMatcher(element.getAsString());
+    static BiPredicate<TreeConfiguration, WorldGenLevel> parse(
+            Object node, @Nullable DynamicReferences.Builder refs, String where) {
+        if (node instanceof String s) {
+            return resolveName(s.trim(), refs, where);
         }
-        if (element.isJsonObject()) {
-            return parseTreeTypeObject(element.getAsJsonObject());
+        if (node instanceof Map<?, ?> map) {
+            return parseObject(map, where);
         }
-        if (element.isJsonArray()) {
-            List<BiPredicate<TreeConfiguration, WorldGenLevel>> matchers = new ArrayList<>();
-            for (JsonElement e : element.getAsJsonArray()) {
-                BiPredicate<TreeConfiguration, WorldGenLevel> m = parseTreeType(e);
-                if (m != null) matchers.add(m);
+        if (node instanceof List<?> list) {
+            List<BiPredicate<TreeConfiguration, WorldGenLevel>> matchers = new ArrayList<>(list.size());
+            for (int i = 0; i < list.size(); i++) {
+                Object element = list.get(i);
+                if (element == null) continue;
+                matchers.add(parse(element, refs, where + "[" + i + "]"));
             }
-            if (matchers.isEmpty()) return null;
+            if (matchers.isEmpty()) {
+                throw new PackLoadException(where + ": tree_type list must not be empty");
+            }
             if (matchers.size() == 1) return matchers.get(0);
-            return TreeMatchers.any(matchers.toArray(new BiPredicate[0]));
+            return or(matchers);
         }
-        return null;
+        throw new PackLoadException(where + ": tree_type must be text, a mapping, or a list");
     }
 
-    static BiPredicate<TreeConfiguration, WorldGenLevel> parseTreeTypeObject(JsonObject obj) {
-        BiPredicate<TreeConfiguration, WorldGenLevel> result = (config, level) -> true;
+    private static BiPredicate<TreeConfiguration, WorldGenLevel> parseObject(Map<?, ?> map, String where) {
+        BiPredicate<TreeConfiguration, WorldGenLevel> result = null;
 
-        if (obj.has("foliage")) {
-            String foliage = obj.get("foliage").getAsString();
-            BiPredicate<TreeConfiguration, WorldGenLevel> foliageCheck = resolveFoliageCheck(foliage);
-            if (foliageCheck != null) result = result.and(foliageCheck);
-        }
-
-        if (obj.has("trunk")) {
-            String trunk = obj.get("trunk").getAsString();
-            BiPredicate<TreeConfiguration, WorldGenLevel> trunkCheck = resolveTrunkCheck(trunk);
-            if (trunkCheck != null) result = result.and(trunkCheck);
-        }
-
-        if (obj.has("trunk_block")) {
-            String blockId = obj.get("trunk_block").getAsString();
-            Block block = BuiltInRegistries.BLOCK.getValue(Identifier.parse(blockId));
-            if (block != null && block != Blocks.AIR) {
-                result = result.and(TreeMatchers.byTrunkBlock(block));
+        for (Object keyObj : map.keySet()) {
+            String key = String.valueOf(keyObj);
+            if (!key.equals("foliage") && !key.equals("trunk") && !key.equals("trunk_block")) {
+                throw new PackLoadException(where + ": unknown tree_type filter '" + key
+                        + "' (expected 'foliage', 'trunk' or 'trunk_block')");
             }
         }
 
+        if (map.containsKey("foliage")) {
+            String name = YamlValues.asString(map.get("foliage"), where + " field 'foliage'");
+            result = combine(result, resolveFoliage(name, where));
+        }
+        if (map.containsKey("trunk")) {
+            String name = YamlValues.asString(map.get("trunk"), where + " field 'trunk'");
+            result = combine(result, resolveTrunk(name, where));
+        }
+        if (map.containsKey("trunk_block")) {
+            String id = YamlValues.asString(map.get("trunk_block"), where + " field 'trunk_block'");
+            result = combine(result, resolveBlock(id, where));
+        }
+
+        if (result == null) {
+            throw new PackLoadException(where
+                    + ": tree_type mapping needs at least one of 'foliage', 'trunk', 'trunk_block'");
+        }
         return result;
     }
 
-    @Nullable
-    static BiPredicate<TreeConfiguration, WorldGenLevel> resolveTreeMatcher(String name) {
-        return switch (name) {
+    /// A shorthand alias maps to its built-in matcher; anything namespaced is
+    /// treated as a configured-feature id.
+    static BiPredicate<TreeConfiguration, WorldGenLevel> resolveName(
+            String name, @Nullable DynamicReferences.Builder refs, String where) {
+        if (name.indexOf(':') >= 0) {
+            Identifier id = parseIdentifier(name, where);
+            if (refs != null) refs.addFeature(id);
+            return (config, level) -> FeatureIndex.matches(config, level, id);
+        }
+        BiPredicate<TreeConfiguration, WorldGenLevel> matcher = switch (name) {
             case "oak" -> TreeMatchers.OAK;
             case "fancy_oak" -> TreeMatchers.FANCY_OAK;
             case "birch" -> TreeMatchers.BIRCH;
@@ -93,16 +114,18 @@ final class TreeTypeParser {
             case "swamp" -> TreeMatchers.SWAMP;
             case "azalea" -> TreeMatchers.AZALEA;
             case "mangrove" -> TreeMatchers.MANGROVE;
-            default -> {
-                Constants.LOG.warn("[Orchard] Unknown tree_type: {}", name);
-                yield null;
-            }
+            default -> null;
         };
+        if (matcher == null) {
+            throw new PackLoadException(where + ": unknown tree_type '" + name
+                    + "' - use a built-in name, a feature id like 'minecraft:oak', "
+                    + "or a filter mapping");
+        }
+        return matcher;
     }
 
-    @Nullable
-    static BiPredicate<TreeConfiguration, WorldGenLevel> resolveFoliageCheck(String name) {
-        return switch (name) {
+    static BiPredicate<TreeConfiguration, WorldGenLevel> resolveFoliage(String name, String where) {
+        BiPredicate<TreeConfiguration, WorldGenLevel> matcher = switch (name) {
             case "blob" -> TreeMatchers.byFoliage(
                     net.minecraft.world.level.levelgen.feature.foliageplacers.BlobFoliagePlacer.class);
             case "fancy" -> TreeMatchers.byFoliage(
@@ -127,11 +150,14 @@ final class TreeTypeParser {
                     net.minecraft.world.level.levelgen.feature.foliageplacers.RandomSpreadFoliagePlacer.class);
             default -> null;
         };
+        if (matcher == null) {
+            throw new PackLoadException(where + ": unknown foliage placer '" + name + "'");
+        }
+        return matcher;
     }
 
-    @Nullable
-    static BiPredicate<TreeConfiguration, WorldGenLevel> resolveTrunkCheck(String name) {
-        return switch (name) {
+    static BiPredicate<TreeConfiguration, WorldGenLevel> resolveTrunk(String name, String where) {
+        BiPredicate<TreeConfiguration, WorldGenLevel> matcher = switch (name) {
             case "dark_oak" -> TreeMatchers.byTrunk(DarkOakTrunkPlacer.class);
             case "forking" -> TreeMatchers.byTrunk(ForkingTrunkPlacer.class);
             case "giant" -> TreeMatchers.byTrunk(GiantTrunkPlacer.class);
@@ -139,5 +165,52 @@ final class TreeTypeParser {
             case "upwards_branching" -> TreeMatchers.byTrunk(UpwardsBranchingTrunkPlacer.class);
             default -> null;
         };
+        if (matcher == null) {
+            throw new PackLoadException(where + ": unknown trunk placer '" + name + "'");
+        }
+        return matcher;
     }
+
+    /// Looks the block up in the registry right away, then matches on it.
+    static BiPredicate<TreeConfiguration, WorldGenLevel> resolveBlock(String id, String where) {
+        Block block = resolveBlockNow(id, where);
+        return TreeMatchers.byTrunkBlock(block);
+    }
+
+    /// Eager registry lookup for pack loading; air counts as unknown here.
+    static Block resolveBlockNow(String id, String where) {
+        Identifier blockId = parseIdentifier(id, where);
+        Block block = BuiltInRegistries.BLOCK.getValue(blockId);
+        if (block == null || block == Blocks.AIR) {
+            throw new PackLoadException(where + ": unknown block '" + id + "'");
+        }
+        return block;
+    }
+
+    static Identifier parseIdentifier(String raw, String where) {
+        try {
+            Identifier id = Identifier.parse(raw);
+            if (id.getPath().isEmpty()) throw new IllegalArgumentException("empty path");
+            return id;
+        } catch (Exception e) {
+            throw new PackLoadException(where + ": invalid identifier '" + raw + "'");
+        }
+    }
+
+    private static BiPredicate<TreeConfiguration, WorldGenLevel> combine(
+            @Nullable BiPredicate<TreeConfiguration, WorldGenLevel> a,
+            BiPredicate<TreeConfiguration, WorldGenLevel> b) {
+        return a == null ? b : a.and(b);
+    }
+
+    private static BiPredicate<TreeConfiguration, WorldGenLevel> or(
+            List<BiPredicate<TreeConfiguration, WorldGenLevel>> matchers) {
+        return (config, level) -> {
+            for (BiPredicate<TreeConfiguration, WorldGenLevel> m : matchers) {
+                if (m.test(config, level)) return true;
+            }
+            return false;
+        };
+    }
+
 }

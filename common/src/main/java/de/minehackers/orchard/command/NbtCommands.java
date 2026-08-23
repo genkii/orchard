@@ -11,12 +11,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import de.minehackers.orchard.OrchardCommon;
 
-/// /orchard nbt info command.
+/// The /orchard nbt info subcommand.
 public final class NbtCommands {
 
     private NbtCommands() {}
 
-    /// Shows file size and parsed dimensions of an NBT template.
+    /// Shows the file size, plus the parsed dimensions when run by a player
+    /// (parsing needs a server level for block registry access).
     static int runNbtInfo(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         String name = StringArgumentType.getString(ctx, "name");

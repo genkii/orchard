@@ -12,19 +12,19 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
-/// A pre-processed tree template with resolved palettes and pre-computed rotation transforms.
-/// Place() is a tight loop over a flat int array - no NBT parsing, no palette lookups,
-/// no StructurePlaceSettings allocation, no processor overhead.
+/// A tree template flattened ahead of time: resolved palette plus pre-rotated
+/// block offsets for all four rotations. Placing is then just a tight loop over
+/// flat data - no NBT parsing, no settings objects, no processor callbacks.
 final class CompactTemplate {
 
-    /// Pre-computed block entry: offset from origin (dx, dy, dz) and palette index.
+    /// One block of the template: offset from the origin plus its palette index.
     record BlockEntry(int dx, int dy, int dz, int paletteIndex) {}
 
     private final Vec3i size;
     private final BlockState[] palette;
     private final List<BlockEntry>[] blocksByRotation;
 
-    /// Rotate a template-space position by the given rotation around the center half-dimensions.
+    /// Rotates a template-space position around the template's center point.
     private static int[] rotatePos(int x, int y, int z, int hx, int hz, Rotation rotation) {
         return switch (rotation) {
             case NONE                  -> new int[]{ x, y,  z };
@@ -40,19 +40,18 @@ final class CompactTemplate {
         this.blocksByRotation = blocksByRotation;
     }
 
-    /// Build a CompactTemplate from a loaded StructureTemplate.
-    /// Resolves the block palette and pre-computes rotated offset lists for all 4 rotations.
+    /// Converts a loaded StructureTemplate into the compact form: builds the
+    /// palette and writes out pre-rotated offset lists for all four rotations.
     static CompactTemplate fromStructureTemplate(StructureTemplate template) {
         Vec3i size = template.getSize();
         int hx = size.getX() / 2;
         int hz = size.getZ() / 2;
 
-        // filterBlocks with null block and transform=false gives raw template-space positions.
+        // filterBlocks with a null block filter and transform=false leaves positions in template space.
         var blocks = template.filterBlocks(BlockPos.ZERO, new StructurePlaceSettings(), (net.minecraft.world.level.block.Block) null, false);
 
-        // Resolve palette: the first entry in each palette layer maps index -> BlockState.
-        // StructureTemplate stores blocks as (pos, state, entity) where state is the actual
-        // resolved state (not palette-indexed). We collect unique states for compact storage.
+        // StructureTemplate gives us fully resolved block states rather than palette
+        // indices, so we build our own palette of unique states as we go.
         var paletteList = new ArrayList<BlockState>();
         var stateToIndex = new java.util.IdentityHashMap<BlockState, Integer>();
 
@@ -65,7 +64,7 @@ final class CompactTemplate {
         for (StructureTemplate.StructureBlockInfo info : blocks) {
             BlockState state = info.state();
 
-            // Skip air - the processor would skip it anyway, and the world is already air there.
+            // Skip air - nothing to place and the spot is air already.
             if (state.isAir()) continue;
 
             Integer idx = stateToIndex.get(state);
@@ -88,7 +87,7 @@ final class CompactTemplate {
             }
         }
 
-        // Trim to size.
+        // Freeze everything into immutable copies.
         var paletteArray = paletteList.toArray(BlockState[]::new);
         @SuppressWarnings("unchecked")
         List<BlockEntry>[] trimmed = new List[4];
@@ -99,25 +98,33 @@ final class CompactTemplate {
         return new CompactTemplate(size, paletteArray, trimmed);
     }
 
-    /// Place this template at origin with a random rotation. Inlines terrain preservation.
-    /// The world-gen hot path: one RNG call, tight loop over pre-computed block list.
+    /// Places the template at origin with a random rotation. This is the worldgen
+    /// hot path: one RNG call, tight loop, terrain preservation inlined below.
     static void place(CompactTemplate template, ServerLevelAccessor level,
                       BlockPos origin, net.minecraft.util.RandomSource random, int originYOffset) {
         int rotationIndex = random.nextInt(4);
         place(template, level, origin, originYOffset, Rotation.values()[rotationIndex]);
     }
 
-    /// Place this template at origin with a specific rotation.
+    /// Same, but with the rotation chosen by the caller.
     static void place(CompactTemplate template, ServerLevelAccessor level,
                       BlockPos origin, int originYOffset, Rotation rotation) {
         List<BlockEntry> blocks = template.blocksByRotation[rotation.ordinal()];
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
+        // Never write outside the build height - templates near the world
+        // ceiling would otherwise crash chunk generation. maxY is exclusive.
+        int minY = level.getMinY();
+        int maxY = level.getMaxY();
+
         for (int i = 0; i < blocks.size(); i++) {
             BlockEntry entry = blocks.get(i);
+            int y = origin.getY() + originYOffset + entry.dy();
+            if (y < minY || y >= maxY) continue;
+
             pos.setWithOffset(origin, entry.dx(), originYOffset + entry.dy(), entry.dz());
 
-            // Inline TerrainPreservingProcessor: don't overwrite bedrock or lava.
+            // Terrain preservation, inlined: never overwrite bedrock or lava.
             BlockState existing = level.getBlockState(pos);
             if (existing.is(Blocks.BEDROCK)) continue;
             if (existing.getFluidState().is(FluidTags.LAVA)) continue;

@@ -10,8 +10,9 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlac
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessor;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
-/// Keeps existing terrain intact when placing NBT structures.
-/// Won't overwrite bedrock, lava, or air blocks.
+/// Keeps tree placement from wrecking the landscape: air blocks inside the
+/// structure are dropped outright, and bedrock or lava already at a target
+/// position is never overwritten. Anything else gets placed as usual.
 final class TerrainPreservingProcessor implements StructureProcessor {
 
     static final TerrainPreservingProcessor INSTANCE = new TerrainPreservingProcessor();

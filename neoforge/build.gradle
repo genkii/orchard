@@ -3,6 +3,12 @@ plugins {
     id 'net.neoforged.moddev'
 }
 
+dependencies {
+    // Embed the YAML parser into the mod JAR (NeoForge JarJar)
+    implementation("org.yaml:snakeyaml:${snakeyaml_version}")
+    jarJar("org.yaml:snakeyaml:[${snakeyaml_version},3.0)")
+}
+
 neoForge {
     version = neoforge_version
     // Automatically enable neoforge AccessTransformers if the file exists

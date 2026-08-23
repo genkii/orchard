@@ -1,0 +1,21 @@
+modLoader = "lowcodefml"
+loaderVersion = "[4,)"
+license = "${license}"
+[[mods]]
+modId = "orchard_scripting"
+version = "${version}"
+displayName = "Orchard: Scripting"
+authors = "${mod_author}"
+description = '''JavaScript pack data support for Orchard - write tree definitions in .js files.'''
+[[dependencies.orchard_scripting]]
+modId = "orchard"
+type = "required"
+versionRange = "*"
+ordering = "AFTER"
+side = "BOTH"
+[[dependencies.orchard_scripting]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"

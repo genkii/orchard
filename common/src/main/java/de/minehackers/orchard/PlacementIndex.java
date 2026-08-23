@@ -8,9 +8,10 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.core.BlockPos;
 
-/// Chunk-indexed spatial tracking for placed tree positions.
-/// Inner maps are partitioned by NBT path so queries skip irrelevant placements.
-/// Auto-prunes chunks older than 30 minutes every 4096 placements.
+/// Keeps track of where trees have been placed, bucketed by chunk. Each
+/// chunk's entries are further split by NBT path, so spacing queries only ever
+/// look at the tree type they care about. Old chunks get pruned occasionally
+/// so the map can't grow forever.
 final class PlacementIndex {
 
     private PlacementIndex() {}
@@ -38,7 +39,8 @@ final class PlacementIndex {
         }
     }
 
-    /// Checks if the same NBT path was placed within the given radius.
+    /// True if the same template went down within radius of origin. Horizontal
+    /// distance only - Y differences are deliberately ignored.
     public static boolean hasNearbyPlacement(String nbtPath, BlockPos origin, int radius) {
         int chunkRadius = (radius >> 4) + 1;
         int originChunkX = origin.getX() >> 4;
@@ -70,7 +72,7 @@ final class PlacementIndex {
         placementCounter.set(0);
     }
 
-    /// Returns a "chunks=N, tracked_placements=N" summary string.
+    /// One-liner for the stats command.
     public static String getStats() {
         int chunks = CHUNK_INDEX.size();
         int placements = 0;
@@ -82,7 +84,6 @@ final class PlacementIndex {
         return "chunks=" + chunks + ", tracked_placements=" + placements;
     }
 
-    /// Evicts chunks whose last access is older than the max age.
     static void pruneStaleChunks(long now) {
         long cutoff = now - CHUNK_MAX_AGE_MS;
         int pruned = 0;

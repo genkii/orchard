@@ -1,53 +1,73 @@
 package de.minehackers.orchard.config;
 
-import com.google.gson.JsonElement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiPredicate;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
-import de.minehackers.orchard.Constants;
+import org.jetbrains.annotations.Nullable;
+import de.minehackers.orchard.matchers.FeatureIndex;
 import de.minehackers.orchard.matchers.TreeMatchers;
+import de.minehackers.orchard.pack.DynamicReferences;
+import de.minehackers.orchard.pack.PackLoadException;
 
-/// Parses mushroom_type JSON fields into mushroom-matching predicates.
+/// Compiles mushroom_type selectors into mushroom-matching predicates. Accepts
+/// the shorthand names red/brown/any, a list of them, or any configured-feature
+/// id such as minecraft:huge_red_mushroom.
 final class MushroomTypeParser {
 
     private MushroomTypeParser() {}
 
-    @Nullable
-    static BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> parseMushroomType(JsonElement element) {
-        if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
-            return resolveMushroomMatcher(element.getAsString());
+    static BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> parse(
+            Object node, @Nullable DynamicReferences.Builder refs, String where) {
+        if (node instanceof String s) {
+            return resolveName(s.trim(), refs, where);
         }
-        if (element.isJsonArray()) {
-            List<BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel>> matchers = new ArrayList<>();
-            for (JsonElement e : element.getAsJsonArray()) {
-                BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> m = parseMushroomType(e);
-                if (m != null) matchers.add(m);
+        if (node instanceof List<?> list) {
+            List<BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel>> matchers =
+                    new ArrayList<>(list.size());
+            for (int i = 0; i < list.size(); i++) {
+                Object element = list.get(i);
+                if (element == null) continue;
+                matchers.add(parse(element, refs, where + "[" + i + "]"));
             }
-            if (matchers.isEmpty()) return null;
+            if (matchers.isEmpty()) {
+                throw new PackLoadException(where + ": mushroom_type list must not be empty");
+            }
             if (matchers.size() == 1) return matchers.get(0);
-            return (config, level) -> {
-                for (BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> m : matchers) {
-                    if (m.test(config, level)) return true;
-                }
-                return false;
-            };
+            return anyOf(matchers);
         }
-        return null;
+        throw new PackLoadException(where + ": mushroom_type must be text or a list");
     }
 
-    @Nullable
-    static BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> resolveMushroomMatcher(String name) {
-        return switch (name) {
+    private static BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> resolveName(
+            String name, @Nullable DynamicReferences.Builder refs, String where) {
+        if (name.indexOf(':') >= 0) {
+            Identifier id = TreeTypeParser.parseIdentifier(name, where);
+            if (refs != null) refs.addFeature(id);
+            return (config, level) -> FeatureIndex.matches(config, level, id);
+        }
+        BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> matcher = switch (name) {
             case "red" -> TreeMatchers.RED_MUSHROOM;
             case "brown" -> TreeMatchers.BROWN_MUSHROOM;
             case "any" -> TreeMatchers.ANY_MUSHROOM;
-            default -> {
-                Constants.LOG.warn("[Orchard] Unknown mushroom_type: {}", name);
-                yield null;
+            default -> null;
+        };
+        if (matcher == null) {
+            throw new PackLoadException(where + ": unknown mushroom_type '" + name
+                    + "' - use red, brown, any, or a feature id");
+        }
+        return matcher;
+    }
+
+    private static BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> anyOf(
+            List<BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel>> matchers) {
+        return (config, level) -> {
+            for (BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> m : matchers) {
+                if (m.test(config, level)) return true;
             }
+            return false;
         };
     }
 }

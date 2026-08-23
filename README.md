@@ -9,6 +9,8 @@ Simply said, orchard is a mod giving you the ability to replace any tree and fun
 ## Why You'll Love It
 
 * **Endless variety** With orchard you have the ability to add anything you want and as much as you want to the Minecraft flora
+* **Packs** Organise your trees into multiple packs and switch between them with one line of YAML
+* **Modded trees too** Replace trees from other mods by referencing their configured features
 * **Biome-specific trees** Make certain designs only appear in specific biomes.
 * **Rare finds** Mark special designs as rare so they only appear occasionally.
 * **Underground roots** Gives you the ability to offset trees so you can easily add roots to your trees
@@ -17,7 +19,7 @@ Simply said, orchard is a mod giving you the ability to replace any tree and fun
 
 ## Supported Tree Types
 
-Oak, birch, spruce, pine, jungle, acacia, dark oak, cherry, swamp, azalea, mangrove, plus nether fungi (warped, crimson) and huge mushrooms (red, brown).
+Oak, birch, spruce, pine, jungle, acacia, dark oak, cherry, swamp, azalea, mangrove, plus nether fungi (warped, crimson) and huge mushrooms (red, brown). Any other tree from vanilla or mods can be targeted by its configured-feature id.
 
 ## Commands
 
@@ -25,7 +27,7 @@ All commands are run in-game and require operator permissions.
 
 | Command                    | What it does                                                                            |
 | -------------------------- | --------------------------------------------------------------------------------------- |
-| `/orchard reload`          | Reloads all config files from disk                                                      |
+| `/orchard packs`           | Shows the active pack, available packs and how to switch                                |
 | `/orchard status`          | Shows all registered tree definitions, whether their NBT files exist, and their weights |
 | `/orchard stats`           | Shows runtime statistics (cache hits, placements, etc.)                                 |
 | `/orchard list`            | Lists all loaded definitions with their full properties                                 |
@@ -35,6 +37,7 @@ All commands are run in-game and require operator permissions.
 | `/orchard find <query>`    | Searches through all definitions and NBT files by name                                  |
 | `/orchard validate`        | Checks all your config files for parsing errors                                         |
 | `/orchard nbt info <name>` | Shows you the tree and file size                                                        |
+| `/orchard reload`          | Reloads the active pack from disk                                                       |
 | `/orchard clearcache`      | Clears all cached `.nbt` files                                                          |
 
 ## Getting Started
@@ -45,49 +48,72 @@ Orchard makes it easy to get started adding custom trees to your world.
 
 1. Build your tree in creative mode
 2. Run `/orchard create my_tree <pos1> <pos2>` to capture it as an NBT file
-3. Move the file from `config/orchard/generated/` to `config/orchard/nbt/`
-4. Create a JSON config in `config/orchard/data/` (see below)
+3. Move the file from `config/orchard/generated/` to `config/orchard/packs/my-pack/nbt/`
+4. Create a YAML config in `config/orchard/packs/my-pack/data/` (see below)
 5. Run `/orchard reload` to apply
 
 **Manual setup:**
 
-Orchard loads your trees from:
+Orchard loads content from packs:
 
 ```text
-config/orchard/nbt/         <- place your .nbt files here
-config/orchard/data/        <- place your .json configs here
-config/orchard/generated/   <- /orchard create saves here (staging area)
+config/orchard/
+├── orchard.yaml              <- global settings (which pack is active)
+├── packs/
+│   └── my-pack/              <- your own pack
+│       ├── pack.yaml         <- pack metadata
+│       ├── data/             <- .yaml tree definitions
+│       └── nbt/              <- .nbt structures
+├── bundled/                  <- built-in defaults, extracted on first run
+                               (plain data/ + nbt/, not a pack)
+└── generated/                <- /orchard create saves here (staging area)
 ```
 
-All your `.nbt` files should be put in `nbt/` and all the `.json` configs should be put in `data/`
+When `pack.selected` is `auto` (the default), Orchard uses the first valid pack
+from `packs/` in alphabetical order; if you have no packs it falls back to the
+built-in defaults in `bundled/`, and if those are missing too (-TINY JAR),
+vanilla worldgen stays untouched.
 
-**2. Create A Config**
+**Create A Pack**
 
-Orchard will only load your trees if you have a configuration entry in `data/`, but no worries creating one is straightforward:
+1. Make the folder `config/orchard/packs/my-pack/` with a `pack.yaml` inside:
 
-```json
-{
-  "nbt": "mytree.nbt",
-  "tree_type": "oak"
-}
+```yaml
+name: my-pack
+format: 0.1
+version: 1.0.0
+description: My custom Orchard trees
 ```
 
-The `nbt` field tells orchard which file to load and the `tree_type` field tells orchard which tree to replace
+2. Add a definition in `data/trees.yaml`:
+
+```yaml
+- nbt: mytree.nbt
+  tree_type: oak
+```
+
+3. Put `mytree.nbt` into the pack's `nbt/` folder and run `/orchard reload`.
+
+To activate a specific pack instead of auto-picking, set it in
+`config/orchard/orchard.yaml`:
+
+```yaml
+pack:
+  selected: my-pack
+```
 
 ### More Options
 
-You can also control more using the other json options we have.
+Definitions support more fields:
 
-```json
-{
-  "nbt": "mytree.nbt",
-  "tree_type": "oak",
-  "weight": 2,
-  "min_spacing": 5,
-  "biomes": ["#minecraft:is_forest"], 
-  "origin_y_offset": -2,
-  "rare": false
-}
+```yaml
+- nbt: mytree.nbt
+  tree_type: oak
+  weight: 2
+  min_spacing: 5
+  biomes: ["#minecraft:is_forest"]
+  origin_y_offset: -2
+  rare: false
 ```
 
 | Field             | What it does                                    |
@@ -98,9 +124,12 @@ You can also control more using the other json options we have.
 | `origin_y_offset` | Shift the tree down to create underground roots |
 | `rare`            | Only 2.5% chance to spawn                       |
 
+See [docs/config-reference.md](docs/config-reference.md) for every field,
+including modded-tree overrides via configured-feature ids.
+
 ### Multiple Variants
 
-Add multiple config files with the same `tree_type` and Orchard will randomly pick between them. Give them different weights to control how often each appears.
+Add multiple entries with the same `tree_type` and Orchard will randomly pick between them. Give them different weights to control how often each appears.
 
 ## Premade Configs
 
@@ -108,7 +137,29 @@ Premade configs are available on our Discord server
 
 ## Other Versions
 
-Orchard supports both **NeoForge** and **Fabric** for Minecraft 26.2. JARs for both loaders are included in the `bundled/` directory.
+Orchard supports both **NeoForge** and **Fabric** for Minecraft 26.2.
+
+* Full JARs include the built-in defaults and are the recommended download.
+* `-TINY` JARs ship without the built-in defaults (smaller download, nothing else differs).
+* **Orchard: Scripting** (optional addon) adds JavaScript support - write your
+  tree definitions in `.js` files with the full power of a real language:
+
+```js
+// packs/my-pack/data/trees.js
+define({ nbt: "oak1.nbt", tree_type: "oak", weight: 2 });
+
+for (var i = 1; i <= 5; i++) {
+    define({
+        nbt: "birch" + i + ".nbt",
+        tree_type: "birch",
+        biomes: orchard.tag("#is_forest"),
+        rare: (i === 5)
+    });
+}
+```
+
+Scripts run once when the pack loads, inside a sandbox (no Java access, 5s
+time limit), and are validated by the same pipeline as YAML files.
 
 ## Mod Recommendations
 
@@ -128,7 +179,11 @@ See [LICENSE](LICENSE) (MIT).
 ## Building
 
 ```bash
-./gradlew build
+./gradlew build          # development JARs without the bundled pack
+./bundle.sh              # full + -TINY distribution JARs into bundled/
+./bundle.sh --tiny       # only -TINY JARs
 ```
 
-The mod JARs will be in `fabric/build/libs/` and `neoforge/build/libs/`.
+**Releases:** pushing a git tag `v<version>` (e.g. `v0.6.0-BETA`, matching
+`gradle.properties`) runs the full bundle in CI and attaches all JARs -
+full, `-TINY` and Scripting addon - to a GitHub Release automatically.

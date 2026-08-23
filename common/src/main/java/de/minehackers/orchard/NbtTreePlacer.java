@@ -28,9 +28,11 @@ import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/// Loads, caches, and places NBT structure templates as tree replacements.
-/// Templates are loaded once, converted to a compact representation with pre-computed
-/// rotation transforms, and cached. Placement is a tight loop over flat int arrays.
+/// Swaps vanilla trees for NBT structure templates. Each file is read once,
+/// converted to a CompactTemplate with pre-rotated offsets, and kept in a
+/// bounded cache - placing one afterwards is just a tight loop over flat data.
+/// All the surface checks (terrain, spacing, obstructions) run before anything
+/// gets placed; if any fail, vanilla generation carries on untouched.
 public final class NbtTreePlacer {
 
     private NbtTreePlacer() {}
@@ -48,7 +50,9 @@ public final class NbtTreePlacer {
     private static final int LOG_SCAN_HEIGHT_ABOVE = 6;
     private static final int LOG_SCAN_DEPTH_BELOW = 2;
 
-    private static double maxObstructedFraction = 0.10;
+    // volatile: written by boot/reload on the main thread, read on every
+    // placement check by concurrent worldgen worker threads.
+    private static volatile double maxObstructedFraction = 0.10;
     private static final int WALL_CHECK_HEIGHT = 5;
     private static final int SKY_SCAN_HEIGHT = 24;
 
@@ -77,10 +81,15 @@ public final class NbtTreePlacer {
         Constants.LOG.info("[Orchard] Cache pre-warmed: {} template(s) loaded, {} missing.", loaded, missing);
     }
 
-    /// Returns the cached compact template, loading and converting from disk on first access.
+    /// Fetches a template from cache, reading and converting the NBT on first
+    /// use. Failed loads are remembered too, so a broken file doesn't get
+    /// retried on every single tree.
     @Nullable
     public static CompactTemplate getOrLoad(OrchardDefinition def, ServerLevelAccessor level) {
-        String key = def.getNbtFileName();
+        // Key by the resolved file path: different packs may ship files with
+        // identical names, and a filename-only key would serve stale templates
+        // from a previously active pack after a reload.
+        String key = def.getNbtDirectory().resolve(def.getNbtFileName()).toString();
         long now = System.nanoTime();
         CompactTemplate result = CACHE.computeIfAbsent(key, k -> {
             CompactTemplate loaded = tryLoadAndCompact(k, def.getNbtDirectory(), level);
@@ -98,7 +107,7 @@ public final class NbtTreePlacer {
         return result;
     }
 
-    /// Loads an NBT file, converts to CompactTemplate, and caches it.
+    /// Reads one NBT file and compacts it. Null if missing, oversized or broken.
     @Nullable
     private static CompactTemplate tryLoadAndCompact(String fileName, Path nbtDir, ServerLevelAccessor level) {
         Path filePath = nbtDir.resolve(fileName);
@@ -160,7 +169,7 @@ public final class NbtTreePlacer {
             + ", evictions=" + CACHE_EVICTIONS.get();
     }
 
-    /// Returns a multi-line stats string for the /orchard stats command.
+    /// Multi-line breakdown for the /orchard stats command.
     public static String[] getDetailedStats() {
         long hits = CACHE_HITS.get();
         long misses = CACHE_MISSES.get();
@@ -185,7 +194,8 @@ public final class NbtTreePlacer {
         return PlacementIndex.hasNearbyPlacement(nbtPath, origin, radius);
     }
 
-    /// Scans a cylinder around origin for any log blocks. Used for spacing enforcement.
+    /// Scans a cylinder around origin for log blocks, complementing the
+    /// placement index when enforcing spacing.
     public static boolean hasNearbyLog(ServerLevelAccessor level, BlockPos origin, int radius) {
         long r2 = (long) radius * radius;
         int originChunkX = origin.getX() >> 4;
@@ -214,7 +224,7 @@ public final class NbtTreePlacer {
         return false;
     }
 
-    /// Checks the trunk column is free of bedrock and lava.
+    /// Only bedrock and lava count as blocking the trunk column.
     public static boolean isTrunkClear(ServerLevelAccessor level, BlockPos origin, int height) {
         BlockPos.MutableBlockPos check = origin.mutable();
         for (int dy = 0; dy < height; dy++) {
@@ -227,7 +237,7 @@ public final class NbtTreePlacer {
         return true;
     }
 
-    /// Checks origin is on a valid open-air surface with sky above.
+    /// Origin must rest on solid ground with nothing solid above it.
     public static boolean isOnSurface(ServerLevelAccessor level, BlockPos origin) {
         BlockState originState = level.getBlockState(origin);
         if (originState.isSolid()) {
@@ -249,7 +259,8 @@ public final class NbtTreePlacer {
         return true;
     }
 
-    /// Checks if too many columns are blocked (prevents placement inside villages etc).
+    /// Rejects footprints that are too enclosed - keeps trees out of villages
+    /// and similar builds.
     public static boolean isPlacementClear(ServerLevelAccessor level, BlockPos origin, Vec3i structureSize) {
         int radius = Math.min(Math.max(structureSize.getX(), structureSize.getZ()) / 2, 8);
         int r2 = radius * radius;
@@ -303,7 +314,8 @@ public final class NbtTreePlacer {
         return state.isSolid();
     }
 
-    /// Moves origin down through replaceable blocks (snow layers etc) to find solid ground.
+    /// Walks the origin down through replaceable blocks (snow layers and such)
+    /// until it lands on real ground.
     public static BlockPos groundAdjust(ServerLevelAccessor level, BlockPos origin, int maxDown) {
         BlockPos.MutableBlockPos mutable = origin.mutable();
         for (int i = 0; i < maxDown; i++) {
@@ -318,7 +330,7 @@ public final class NbtTreePlacer {
         return origin;
     }
 
-    // --- Feature interceptors (called from mixins) ---
+    // Entry points called from the feature mixins.
 
     public static final AtomicBoolean TREE_FIRED_ONCE = new AtomicBoolean(false);
     public static final AtomicBoolean FUNGUS_FIRED_ONCE = new AtomicBoolean(false);
@@ -330,8 +342,9 @@ public final class NbtTreePlacer {
         }
     }
 
-    /// Main interception logic shared by tree, fungus, and mushroom mixins.
-    /// Uses compact template placement: one RNG call, tight loop, no processor overhead.
+    /// Shared guts of the tree/fungus/mushroom hooks: run all the placement
+    /// checks, stamp down our template instead, and tell vanilla not to bother.
+    /// If anything fails a check we just return and vanilla proceeds normally.
     public static void tryIntercept(
             FeaturePlaceContext<?> context,
             CallbackInfoReturnable<Boolean> cir,
@@ -349,13 +362,25 @@ public final class NbtTreePlacer {
             return;
         }
 
+        // Definition-specific floor filter, shared by the tree, fungus and
+        // mushroom hooks. Runs after ground adjustment in the tree path, so
+        // this is always the block the structure would actually rest on.
+        // No match means the definition does not apply - vanilla proceeds.
+        if (def.getValidFloor() != null && !def.getValidFloor().test(level.getBlockState(origin.below()))) {
+            return;
+        }
+
         if (!isOnSurface(level, origin)) {
             return;
         }
 
+        // The spacing index is keyed per dimension: identical coordinates in
+        // two dimensions must not suppress each other.
+        String spacingKey = dimKey.identifier() + "|" + def.getNbtFileName();
+
         int spacing = def.getMinSpacing();
         if (spacing > 0) {
-            boolean tooClose = hasNearbyPlacement(def.getNbtFileName(), origin, spacing);
+            boolean tooClose = hasNearbyPlacement(spacingKey, origin, spacing);
             if (!tooClose) {
                 tooClose = hasNearbyLog(level, origin, spacing);
             }
@@ -387,7 +412,7 @@ public final class NbtTreePlacer {
         Constants.LOG.debug("[Orchard] Placing {} at {}", def.getNbtFileName(), origin);
 
         CompactTemplate.place(template, level, origin, context.random(), def.getOriginYOffset());
-        markPlaced(def.getNbtFileName(), origin);
+        markPlaced(spacingKey, origin);
 
         cir.setReturnValue(true);
     }

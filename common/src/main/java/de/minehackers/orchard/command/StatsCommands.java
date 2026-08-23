@@ -5,7 +5,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import de.minehackers.orchard.NbtTreePlacer;
 
-/// /orchard stats command - shows runtime statistics.
+/// The /orchard stats subcommand - dumps the placer's runtime numbers.
 public final class StatsCommands {
 
     private StatsCommands() {}

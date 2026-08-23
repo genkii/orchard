@@ -23,13 +23,14 @@ import de.minehackers.orchard.Constants;
 import de.minehackers.orchard.NbtTreePlacer;
 import de.minehackers.orchard.OrchardCommon;
 
-/// /orchard test command.
+/// The /orchard test subcommand.
 public final class TestCommands {
 
     private TestCommands() {}
 
-    /// Places an NBT at the player position (centered on the structure).
-    /// Shows pre-placement check results so the user can diagnose world-gen issues.
+    /// Debug helper: drops the NBT centered on the player, printing the
+    /// pre-placement checks first so pack authors can see exactly why
+    /// world-gen would (or wouldn't) accept this spot.
     static int runTest(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         if (!src.isPlayer()) {
@@ -136,7 +137,8 @@ public final class TestCommands {
         }
     }
 
-    /// Loads and parses an NBT template from disk.
+    /// Reads an NBT file into a StructureTemplate. Refuses oversized or empty
+    /// files; returns null on any failure, with the reason in the log.
     static StructureTemplate loadTemplate(Path filePath, ServerLevel level) {
         try {
             long fileSize = Files.size(filePath);

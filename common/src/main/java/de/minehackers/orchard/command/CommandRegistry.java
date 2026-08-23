@@ -13,12 +13,13 @@ import de.minehackers.orchard.OrchardCommon;
 import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.OrchardRegistry;
 
-/// Builds the /orchard command tree. Each loader forwards its dispatcher here.
+/// Wires up the /orchard command tree. Every loader hands its dispatcher over here.
 public final class CommandRegistry {
 
     private CommandRegistry() {}
 
-    /// Suggests NBT file names from the registry and the nbt directory.
+    /// Tab completion for NBT names: registered definitions plus any loose
+    /// .nbt files sitting in the nbt directory.
     private static final SuggestionProvider<CommandSourceStack> NBT_FILE_SUGGESTIONS =
         (ctx, builder) -> {
             var defs = OrchardRegistry.getAll();
@@ -35,7 +36,6 @@ public final class CommandRegistry {
             return SharedSuggestionProvider.suggest(names, builder);
         };
 
-    /// Suggests valid rotation names.
     private static final SuggestionProvider<CommandSourceStack> ROTATION_SUGGESTIONS =
         (ctx, builder) -> SharedSuggestionProvider.suggest(
             java.util.List.of("none", "clockwise_90", "clockwise_180", "counterclockwise_90"), builder);
@@ -71,6 +71,7 @@ public final class CommandRegistry {
                     )
                 )
                 .then(Commands.literal("list").executes(StatusCommands::runList))
+                .then(Commands.literal("packs").executes(PackCommands::runPacks))
                 .then(Commands.literal("reload").executes(UtilityCommands::runReload))
                 .then(Commands.literal("clearcache").executes(UtilityCommands::runClearCache))
                 .then(Commands.literal("what").executes(UtilityCommands::runWhat))

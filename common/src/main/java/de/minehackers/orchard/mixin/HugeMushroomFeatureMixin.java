@@ -14,12 +14,16 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import de.minehackers.orchard.Constants;
 import de.minehackers.orchard.NbtTreePlacer;
 import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.OrchardRegistry;
 
-/// Intercepts AbstractHugeMushroomFeature.place to replace huge mushrooms with NBT structures.
-/// Skips bone-mealed small mushrooms. Requires dirt or mycelium ground.
+/// Same idea as the tree mixin but for huge mushrooms: inject at HEAD of
+/// place(), cancel and replace whenever a pack definition matches. Naturally
+/// generated ones only - bone-mealed small mushrooms show up as a red/brown
+/// mushroom block at the origin and we let those pass. We also insist on dirt
+/// or mycelium ground, the same rule vanilla uses.
 @Mixin(AbstractHugeMushroomFeature.class)
 public class HugeMushroomFeatureMixin {
 
@@ -40,23 +44,30 @@ public class HugeMushroomFeatureMixin {
                 originState.is(Blocks.RED_MUSHROOM) || originState.is(Blocks.BROWN_MUSHROOM);
         if (isBoneMeal) return;
 
-        Holder<Biome> biome = level.getBiome(origin);
+        // Same crash-containment rule as the tree mixin: never let a pack
+        // problem kill the chunk worker - vanilla proceeds on any failure.
+        try {
+            Holder<Biome> biome = level.getBiome(origin);
 
-        OrchardDefinition def =
-                OrchardRegistry.pickByMushroomWorldGen(config, level, biome, context.random());
-        if (def == null) return;
+            OrchardDefinition def =
+                    OrchardRegistry.pickByMushroomWorldGen(config, level, biome, context.random());
+            if (def == null) return;
 
-        BlockState groundState = level.getBlockState(origin.below());
+            BlockState groundState = level.getBlockState(origin.below());
 
-        if (groundState.liquid()) {
-            cir.setReturnValue(false);
-            return;
+            if (groundState.liquid()) {
+                cir.setReturnValue(false);
+                return;
+            }
+            if (!groundState.is(BlockTags.DIRT) && !groundState.is(Blocks.MYCELIUM)) {
+                cir.setReturnValue(false);
+                return;
+            }
+
+            NbtTreePlacer.interceptMushroom(context, cir, def, level, origin);
+        } catch (Exception e) {
+            Constants.LOG.error("[Orchard] Mushroom interception failed at {} - falling back to vanilla",
+                    origin, e);
         }
-        if (!groundState.is(BlockTags.DIRT) && !groundState.is(Blocks.MYCELIUM)) {
-            cir.setReturnValue(false);
-            return;
-        }
-
-        NbtTreePlacer.interceptMushroom(context, cir, def, level, origin);
     }
 }

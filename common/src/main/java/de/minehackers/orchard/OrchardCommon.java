@@ -1,93 +1,88 @@
 package de.minehackers.orchard;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import net.minecraft.world.level.ServerLevelAccessor;
-import de.minehackers.orchard.config.ConfigLoader;
+import de.minehackers.orchard.pack.Pack;
+import de.minehackers.orchard.pack.PackManager;
 
-/// Loader-agnostic init logic. Each loader calls init() with its config dir.
+/// Loader-agnostic startup - each loader just calls init() with its config
+/// directory. The flow: read orchard.yaml, scan packs/ (bundled/ as fallback),
+/// activate one pack, done. Everything is parsed and validated once during
+/// pack loading; world generation never repeats any of that work.
 public final class OrchardCommon {
 
     private static Path configDirectory;
-    private static Path nbtDirectory;
-    private static Path generatedDirectory;
 
     private OrchardCommon() {}
 
-    /// Sets up directories, loads JSON configs, registers definitions.
+    /// One-time startup: wire up directories and bring a pack online.
     public static void init(Path configDir) {
-        configDirectory = configDir;
+        configDirectory = configDir.toAbsolutePath();
 
-        Path customTreeDir = configDir.resolve("orchard");
-        Path nbtDir = customTreeDir.resolve("nbt");
-        Path dataDir = customTreeDir.resolve("data");
-        Path genDir = customTreeDir.resolve("generated");
-        nbtDirectory = nbtDir;
-        generatedDirectory = genDir;
+        try {
+            PackManager.boot(configDir);
+        } catch (Exception e) {
+            // Rethrow so the loader entrypoint keeps logging the stack trace,
+            // but remember the failure - /orchard status and /orchard reload
+            // use it to explain why nothing is happening.
+            PackManager.recordBootFailure(e.getMessage() != null ? e.getMessage() : e.toString());
+            throw e;
+        }
 
-        ensureDirectory(customTreeDir);
-        ensureDirectory(nbtDir);
-        ensureDirectory(dataDir);
-        ensureDirectory(genDir);
-
-        DefaultConfigExtractor.extractIfEmpty(configDir);
-
-        List<OrchardDefinition> definitions = ConfigLoader.loadAll(configDir);
-        OrchardRegistry.clearAndRegisterAll(definitions);
-
-        int count = OrchardRegistry.getAll().size();
         Constants.LOG.info("[Orchard] ========================================");
-        Constants.LOG.info("[Orchard] Mod initialised - {} definition(s) registered.", count);
-
-        boolean anyMissing = false;
-        for (OrchardDefinition def : OrchardRegistry.getAll()) {
-            Path filePath = nbtDir.resolve(def.getNbtFileName());
-            if (Files.exists(filePath)) {
-                Constants.LOG.info("[Orchard]   found    {}", def.getNbtFileName());
-            } else {
-                Constants.LOG.warn("[Orchard]   MISSING  {}", def.getNbtFileName());
-                anyMissing = true;
-            }
-        }
-
-        if (anyMissing) {
-            Constants.LOG.warn("[Orchard] One or more NBT files are missing.");
-            Constants.LOG.warn("[Orchard] Place NBT files in: config/orchard/nbt/");
-        }
-
-        Constants.LOG.info("[Orchard] NBT dir: {}", nbtDir);
-        Constants.LOG.info("[Orchard] Data dir: {}", dataDir);
-        Constants.LOG.info("[Orchard] Generated dir: {}", genDir);
+        Constants.LOG.info("[Orchard] Mod initialised.");
+        logActivePack();
+        Constants.LOG.info("[Orchard] Packs directory: {}", getPackDirectory());
+        Constants.LOG.info("[Orchard] Generated dir:   {}", getGeneratedDirectory());
         Constants.LOG.info("[Orchard] ========================================");
     }
 
-    /// Pre-warms the NBT template cache once the server is up.
+    /// Runs once the server is fully up: pre-warms the NBT cache and lets the
+    /// active pack validate its registry references.
     public static void onServerStarted(ServerLevelAccessor level) {
         Constants.LOG.info("[Orchard] Server fully started - pre-warming NBT cache...");
         NbtTreePlacer.preWarmAll(level, getNbtDirectory());
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            PackManager.onServerStarted(serverLevel);
+        }
+    }
+
+    private static void logActivePack() {
+        Pack pack = PackManager.activePack();
+        switch (pack.source()) {
+            case PACKS -> Constants.LOG.info("[Orchard] Active pack:    {} ({})",
+                    pack.metadata().name(), pack.root().getFileName());
+            case BUNDLED -> Constants.LOG.info("[Orchard] Active pack:    {} (bundled)",
+                    pack.metadata().name());
+            case NONE -> {
+                Constants.LOG.warn("[Orchard] No pack active  - vanilla world generation is untouched.");
+                Constants.LOG.warn("[Orchard] Create a pack under: " + getPackDirectory());
+            }
+        }
+        Constants.LOG.info("[Orchard] Definitions:     {}", pack.definitions().size());
     }
 
     public static Path getConfigDirectory() {
         return configDirectory;
     }
 
-    public static Path getNbtDirectory() {
-        return nbtDirectory;
+    /// Root of the orchard folder under the game's config directory.
+    public static Path getOrchardDirectory() {
+        return configDirectory.resolve("orchard");
     }
 
+    /// Where user-provided packs live.
+    public static Path getPackDirectory() {
+        return getOrchardDirectory().resolve("packs");
+    }
+
+    /// Staging area for output of the /orchard create command.
     public static Path getGeneratedDirectory() {
-        return generatedDirectory;
+        return getOrchardDirectory().resolve("generated");
     }
 
-    private static void ensureDirectory(Path dir) {
-        try {
-            if (!Files.exists(dir)) {
-                Files.createDirectories(dir);
-                Constants.LOG.info("[Orchard] Created directory: {}", dir);
-            }
-        } catch (Exception e) {
-            Constants.LOG.error("[Orchard] Failed to create directory {}: {}", dir, e.getMessage());
-        }
+    /// Points into whatever pack is currently active.
+    public static Path getNbtDirectory() {
+        return PackManager.activePack().nbtDirectory();
     }
 }

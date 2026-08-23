@@ -16,8 +16,9 @@ import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFea
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import org.jspecify.annotations.Nullable;
 
-/// Maps an NBT structure file to tree/fungus/mushroom types with optional filters.
-/// Create via the Builder: OrchardDefinition.forNbt("file", dir).worldGen(...).build()
+/// Describes how one NBT structure file replaces trees, fungi or huge mushrooms,
+/// with optional filters for biome, dimension, height and floor. Build one via
+/// the fluent builder returned by forNbt().
 public final class OrchardDefinition {
 
     private final String nbtFileName;
@@ -117,19 +118,22 @@ public final class OrchardDefinition {
         return hugeMushroomWorldGenMatcher != null && hugeMushroomWorldGenMatcher.test(config, level);
     }
 
-    /// No biome filter set means all biomes match.
+    /// With no biome filter set, every biome matches.
     public boolean matchesBiome(Holder<Biome> biome) {
         return biomeMatcher == null || biomeMatcher.test(biome);
     }
 
-    /// Empty dimensions set means all dimensions match.
+    /// An empty dimensions set matches everywhere.
     public boolean matchesDimension(ResourceKey<Level> dimensionKey) {
         return dimensions.isEmpty() || dimensions.contains(dimensionKey);
     }
 
-    /// Both minY and maxY == 0 means no restriction.
+    public boolean hasYRange() {
+        return minY != Integer.MIN_VALUE || maxY != Integer.MAX_VALUE;
+    }
+
+    /// Unrestricted unless the builder set bounds.
     public boolean matchesYRange(int y) {
-        if (minY == 0 && maxY == 0) return true;
         return y >= minY && y <= maxY;
     }
 
@@ -155,8 +159,8 @@ public final class OrchardDefinition {
         private int weight = 1;
         private boolean rare = false;
         private int originYOffset = 0;
-        private int minY = 0;
-        private int maxY = 0;
+        private int minY = Integer.MIN_VALUE;
+        private int maxY = Integer.MAX_VALUE;
         private Predicate<BlockState> validFloor;
 
         private Builder(String nbtFileName, Path nbtDirectory) {
@@ -229,12 +233,12 @@ public final class OrchardDefinition {
             return this;
         }
 
-        /// Shorthand: requires the floor to be a dirt-family block.
+        /// Convenience wrapper: dirt-family floor required.
         public Builder onDirt() {
             return validFloor(state -> state.is(BlockTags.DIRT));
         }
 
-        /// Shorthand: requires the floor to be nylium.
+        /// Convenience wrapper: nylium floor required.
         public Builder onNylium() {
             return validFloor(state -> state.is(BlockTags.NYLIUM));
         }

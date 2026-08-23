@@ -1,27 +1,79 @@
 # Config Reference
 
-Place JSON files in `config/orchard/data/`. Each file can contain one definition or an array of definitions.
+Orchard loads content from **packs**. A pack is a folder containing metadata,
+tree definitions and NBT structures:
 
-A JSON schema is available at [`docs/config-schema.json`](config-schema.json) for editor autocomplete and validation. To use it in VS Code, add to your settings:
-
-```json
-{
-  "json.schemas": [
-    {
-      "fileMatch": ["**/orchard/data/*.json"],
-      "url": "https://raw.githubusercontent.com/MineHackers/orchard/main/docs/config-schema.json"
-    }
-  ]
-}
+```text
+config/orchard/
+├── orchard.yaml              <- global settings
+├── packs/
+│   └── my-pack/
+│       ├── pack.yaml         <- pack metadata (required)
+│       ├── data/*.yaml       <- tree definitions
+│       └── nbt/*.nbt         <- structures
+└── bundled/                  <- built-in defaults, extracted on first run
+                               (plain data/ + nbt/, not a pack)
 ```
 
-## Minimal Example
+## orchard.yaml
 
-```json
-{
-  "nbt": "my_oak_tree.nbt",
-  "tree_type": "oak"
-}
+Created automatically on first run:
+
+```yaml
+# Which pack to activate.
+#   auto     - first valid pack from packs/ in alphabetical order,
+#              falling back to the bundled pack
+#   <name>   - a specific pack by folder name; if it cannot load,
+#              Orchard falls back to auto behaviour
+pack:
+  selected: auto
+
+# Maximum fraction of obstructed blocks tolerated when placing NBT trees.
+placement:
+  max_obstructed_fraction: 0.1
+
+# Chance for definitions marked `rare: true` to spawn.
+rarity:
+  rare_pool_probability: 0.025
+```
+
+## pack.yaml
+
+Every pack needs this file:
+
+```yaml
+name: my-pack            # display name (defaults to the folder name)
+format: 0.1              # pack format - 0.1 is the only supported one
+version: 1.0.0           # your pack's version (informational)
+description: My trees    # shown by /orchard packs (informational)
+```
+
+Packs with an unsupported format are skipped with a log message.
+
+## Pack Selection
+
+`/orchard packs` shows what is available. On startup and after `/orchard reload`
+Orchard picks the active pack like this:
+
+1. If `pack.selected` names a specific pack, try that pack.
+2. Otherwise pick the first valid pack from `packs/` (alphabetical order).
+3. If no user pack exists or it fails to load, use the built-in defaults
+   extracted to `bundled/` (plain `data/` + `nbt/`, no `pack.yaml` needed).
+4. If even the defaults are missing (-TINY JAR), vanilla worldgen runs untouched.
+
+Problems never crash the game: broken files inside a pack are logged and
+skipped, and a pack that cannot load at all falls back as described above.
+
+## Data Files
+
+Place `.yaml` files in a pack's `data/` folder. Each file can contain one
+definition mapping or a list of definitions.
+
+### Minimal Example
+
+```yaml
+nbt: my_oak_tree.nbt
+tree_type: oak
 ```
 
 ---
@@ -30,29 +82,32 @@ A JSON schema is available at [`docs/config-schema.json`](config-schema.json) fo
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `nbt` | string | yes | - | NBT filename (placed in `config/orchard/nbt/`) |
-| `tree_type` | string/object/array | no* | - | Which vanilla tree to replace |
-| `fungus_type` | string/array | no* | - | Which vanilla fungus to replace |
-| `mushroom_type` | string/array | no* | - | Which vanilla mushroom to replace |
+| `nbt` | string | yes | - | NBT filename (placed in the pack's `nbt/` folder) |
+| `tree_type` | string/object/array | no* | - | Which tree(s) to replace |
+| `fungus_type` | string/array | no* | - | Which fungus/fungi to replace |
+| `mushroom_type` | string/array | no* | - | Which mushroom(s) to replace |
 | `weight` | int | no | 1 | Higher = more likely to be picked |
 | `rare` | boolean | no | false | Only spawns ~2.5% of the time |
 | `min_spacing` | int | no | 0 | Minimum blocks between this and other trees |
 | `origin_y_offset` | int | no | 0 | Shift the structure up/down on placement |
-| `min_y` | int | no | 0 | Lowest Y level this can spawn at |
-| `max_y` | int | no | 0 | Highest Y level this can spawn at (0 = no limit) |
+| `min_y` | int | no | none | Lowest Y level this can spawn at |
+| `max_y` | int | no | none | Highest Y level this can spawn at |
 | `biomes` | string/object/array | no | - | Restrict to specific biomes (omit = all biomes) |
 | `dimensions` | string array | no | - | Restrict to specific dimensions (omit = all) |
 | `valid_floor` | string | no | - | Required block type under the tree |
 
 \* At least one of `tree_type`, `fungus_type`, or `mushroom_type` is required.
 
+Unknown fields produce a warning in the log but do not stop the pack.
+
 ---
 
 ## tree_type
 
-Can be a simple string, an object with sub-filters, or an array of either.
+Can be a simple name, a configured-feature id, an object with structural
+filters, or an array of any of these (matches if any entry matches).
 
-### Simple Strings
+### Simple Names
 
 | Value | Matches |
 |-------|---------|
@@ -75,9 +130,27 @@ Can be a simple string, an object with sub-filters, or an array of either.
 | `azalea` | Azalea tree |
 | `mangrove` | Mangrove tree |
 
+### Feature Ids (vanilla + modded)
+
+Use any configured-feature identifier to target trees from vanilla **or other
+mods**:
+
+```yaml
+- nbt: fancy_replacement.nbt
+  tree_type: minecraft:fancy_oak
+
+- nbt: mod_tree_replacement.nbt
+  tree_type: some-mod:some_tree
+```
+
+Orchard identifies which configured feature fired by comparing the feature's
+configuration against the registry at server start. Ids that do not exist are
+reported once in the log but never prevent the pack from loading.
+
 ### Object Form
 
-Match by foliage placer, trunk placer, or trunk block. All fields are optional and combined with AND.
+Match by foliage placer, trunk placer, or trunk block. All fields are optional
+and combined with AND.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -85,9 +158,13 @@ Match by foliage placer, trunk placer, or trunk block. All fields are optional a
 | `trunk` | string | Trunk placer type (see below) |
 | `trunk_block` | string | Specific trunk block ID (e.g. `minecraft:oak_log`) |
 
+This form works for **any** modded tree whose structure uses vanilla-style
+placers, without knowing its feature id.
+
 #### foliage values
 
-`blob`, `fancy`, `spruce`, `pine`, `mega_pine`, `mega_jungle`, `bush`, `acacia`, `dark_oak`, `cherry`, `random_spread`
+`blob`, `fancy`, `spruce`, `pine`, `mega_pine`, `mega_jungle`, `bush`,
+`acacia`, `dark_oak`, `cherry`, `random_spread`
 
 #### trunk values
 
@@ -95,14 +172,11 @@ Match by foliage placer, trunk placer, or trunk block. All fields are optional a
 
 ### Object Example
 
-```json
-{
-  "nbt": "custom_blob_oak.nbt",
-  "tree_type": {
-    "foliage": "blob",
-    "trunk_block": "minecraft:oak_log"
-  }
-}
+```yaml
+- nbt: custom_blob_oak.nbt
+  tree_type:
+    foliage: blob
+    trunk_block: minecraft:oak_log
 ```
 
 ---
@@ -115,6 +189,7 @@ Match by foliage placer, trunk placer, or trunk block. All fields are optional a
 | `crimson` | Crimson fungus |
 | `any` | Any fungus |
 
+Feature ids (`minecraft:crimson_fungus`, `some-mod:some_fungus`) work here too.
 Can also be an array of values (matches any in the array).
 
 ---
@@ -127,7 +202,7 @@ Can also be an array of values (matches any in the array).
 | `brown` | Brown mushroom |
 | `any` | Any mushroom |
 
-Can also be an array of values (matches any in the array).
+Feature ids work here too. Can also be an array of values.
 
 ---
 
@@ -135,64 +210,29 @@ Can also be an array of values (matches any in the array).
 
 Can be a string, object, array, or omitted entirely.
 
-### Simple String
+### Simple Names
 
-| Value | Matches |
-|-------|---------|
-| `plains` | Plains |
-| `sunflower_plains` | Sunflower Plains |
-| `meadow` | Meadow |
-| `snowy_plains` | Snowy Plains |
-| `forest` | Forest |
-| `flower_forest` | Flower Forest |
-| `birch_forest` | Birch Forest |
-| `old_growth_birch_forest` | Old Growth Birch Forest |
-| `dark_forest` | Dark Forest |
-| `windswept_forest` | Windswept Forest |
-| `taiga` | Taiga |
-| `snowy_taiga` | Snowy Taiga |
-| `old_growth_pine_taiga` | Old Growth Pine Taiga |
-| `old_growth_spruce_taiga` | Old Growth Spruce Taiga |
-| `jungle` | Jungle |
-| `sparse_jungle` | Sparse Jungle |
-| `bamboo_jungle` | Bamboo Jungle |
-| `savanna` | Savanna |
-| `savanna_plateau` | Savanna Plateau |
-| `windswept_savanna` | Windswept Savanna |
-| `windswept_hills` | Windswept Hills |
-| `windswept_gravelly_hills` | Windswept Gravelly Hills |
-| `grove` | Grove |
-| `swamp` | Swamp |
-| `mangrove_swamp` | Mangrove Swamp |
-| `cherry_grove` | Cherry Grove |
-| `mushroom_fields` | Mushroom Fields |
-| `lush_caves` | Lush Caves |
-| `crimson_forest` | Crimson Forest |
-| `warped_forest` | Warped Forest |
-| `nether_wastes` | Nether Wastes |
-| `soul_sand_valley` | Soul Sand Valley |
-| `basalt_deltas` | Basalt Deltas |
+Vanilla biome ids without namespace: `plains`, `sunflower_plains`, `meadow`,
+`snowy_plains`, `forest`, `flower_forest`, `birch_forest`,
+`old_growth_birch_forest`, `dark_forest`, `windswept_forest`, `taiga`,
+`snowy_taiga`, `old_growth_pine_taiga`, `old_growth_spruce_taiga`, `jungle`,
+`sparse_jungle`, `bamboo_jungle`, `savanna`, `savanna_plateau`,
+`windswept_savanna`, `windswept_hills`, `windswept_gravelly_hills`, `grove`,
+`swamp`, `mangrove_swamp`, `cherry_grove`, `mushroom_fields`, `lush_caves`,
+`crimson_forest`, `warped_forest`, `nether_wastes`, `soul_sand_valley`,
+`basalt_deltas`.
+
+Namespaced ids also work, including modded biomes: `some-mod:some_biome`.
 
 ### Biome Tags (prefix with `#`)
 
-| Value | Matches |
-|-------|---------|
-| `#is_forest` | Any forest biome |
-| `#is_taiga` | Any taiga biome |
-| `#is_jungle` | Any jungle biome |
-| `#is_savanna` | Any savanna biome |
-| `#is_badlands` | Any badlands biome |
-| `#is_ocean` | Any ocean biome |
-| `#is_river` | Any river biome |
-| `#is_beach` | Any beach biome |
-| `#is_overworld` | Any overworld biome |
-| `#is_nether` | Any nether biome |
-| `#is_end` | Any end biome |
-| `#snowy_spruce_biomes` | Snowy spruce group |
-| `#non_snowy_taiga` | Non-snowy taiga group |
-| `#pine_biomes` | Pine tree biomes |
+Shorthand tags resolve against `minecraft`: `#is_forest`, `#is_taiga`,
+`#is_jungle`, `#is_savanna`, `#is_badlands`, `#is_ocean`, `#is_river`,
+`#is_beach`, `#is_overworld`, `#is_nether`, `#is_end`, plus Orchard groups
+(`#snowy_spruce_biomes`, `#non_snowy_taiga`, `#pine_biomes`).
 
-You can also use any modded biome tag with `#namespace:tag_name`.
+Any vanilla or modded tag can be used with its full id: `#minecraft:is_hill`,
+`#somemod:wonders`.
 
 ### Object Form
 
@@ -202,20 +242,28 @@ You can also use any modded biome tag with `#namespace:tag_name`.
 | `all_of` | array | Match if ALL of the entries match (AND) |
 | `not` | string/object | Match if the inner filter does NOT match |
 
+Combinators can be nested arbitrarily.
+
 ### Array Form
 
 An array of biome names/tags is treated as `any_of`.
 
 ### Examples
 
-```json
-{ "biomes": "forest" }
+```yaml
+biomes: forest
 
-{ "biomes": "#is_forest" }
+biomes: "#is_forest"
 
-{ "biomes": { "any_of": ["forest", "dark_forest", "#is_taiga"] } }
+biomes:
+  any_of: [forest, dark_forest, "#is_taiga"]
 
-{ "biomes": { "all_of": ["#is_overworld", { "not": "mushroom_fields" }] } }
+biomes:
+  all_of:
+    - "#is_overworld"
+    - not: mushroom_fields
+
+biomes: some-mod:some_biome
 ```
 
 ---
@@ -230,12 +278,11 @@ Array of dimension IDs. Omit to match all dimensions.
 | `minecraft:the_nether` | Nether |
 | `minecraft:the_end` | End |
 
-Modded dimensions work too (e.g. `modname:dimension_id`).
+Modded dimensions work too (e.g. `modname:dimension_id`). Unknown dimension
+ids are reported at server start but do not invalidate the pack.
 
-### Example
-
-```json
-{ "dimensions": ["minecraft:overworld", "minecraft:the_nether"] }
+```yaml
+dimensions: [minecraft:overworld, minecraft:the_nether]
 ```
 
 ---
@@ -253,31 +300,89 @@ Requires the block directly below the tree to be a specific type.
 
 ## Complete Example
 
-```json
-[
-  {
-    "nbt": "big_oak.nbt",
-    "tree_type": "fancy_oak",
-    "weight": 3,
-    "min_spacing": 6,
-    "biomes": ["forest", "dark_forest"],
-    "dimensions": ["minecraft:overworld"]
-  },
-  {
-    "nbt": "small_birch.nbt",
-    "tree_type": "birch",
-    "weight": 1,
-    "origin_y_offset": -1,
-    "biomes": "#is_forest",
-    "valid_floor": "dirt"
-  },
-  {
-    "nbt": "rare_jungle.nbt",
-    "tree_type": ["jungle", "jungle_small"],
-    "rare": true,
-    "min_y": 60,
-    "max_y": 200,
-    "biomes": { "any_of": ["jungle", "bamboo_jungle"] }
-  }
-]
+```yaml
+- nbt: big_oak.nbt
+  tree_type: fancy_oak
+  weight: 3
+  min_spacing: 6
+  biomes: [forest, dark_forest]
+  dimensions: [minecraft:overworld]
+
+- nbt: small_birch.nbt
+  tree_type: birch
+  weight: 1
+  origin_y_offset: -1
+  biomes: "#is_forest"
+  valid_floor: dirt
+
+- nbt: rare_jungle.nbt
+  tree_type: [jungle, jungle_small]
+  rare: true
+  min_y: 60
+  max_y: 200
+  biomes:
+    any_of: [jungle, bamboo_jungle]
+
+- nbt: modded_tree.nbt
+  tree_type: some-mod:some_tree
+  weight: 2
 ```
+
+---
+
+## JavaScript Definitions (Orchard: Scripting addon)
+
+Install the optional **Orchard: Scripting** addon and you can put `.js` files
+into a pack's `data/` folder alongside YAML files. A script calls `define(...)`
+once per definition; the fields are exactly the same as in YAML:
+
+```js
+// data/trees.js
+define({
+    nbt: "big_oak.nbt",
+    tree_type: "fancy_oak",
+    weight: 3,
+    min_spacing: 6,
+    biomes: [orchard.biome("forest"), orchard.biome("dark_forest")]
+});
+
+// scripts are real programs - generate variants with loops:
+for (var i = 1; i <= 5; i++) {
+    define({
+        nbt: "birch" + i + ".nbt",
+        tree_type: "birch",
+        biomes: orchard.tag("#is_forest"),
+        rare: (i === 5)
+    });
+}
+```
+
+Helper namespace:
+
+| Function | Returns |
+|----------|---------|
+| `orchard.biome(name)` | Biome id, namespaced if needed (`forest` → `minecraft:forest`) |
+| `orchard.tag(name)` | Biome tag id (`#is_forest` → `#minecraft:is_forest`) |
+| `orchard.block(id)` | Block id, namespaced if needed |
+| `orchard.log(msg)` | Writes to the server log |
+
+Rules:
+
+* Scripts run once at pack load (and on `/orchard reload`) - never during world
+  generation.
+* They execute in a sandbox: JavaScript standard library only, no access to
+  Java classes, hard 5-second time limit per script.
+* Definitions produced by scripts go through exactly the same validation as
+  YAML entries; a broken script is logged and skipped.
+
+---
+
+## Migrating From JSON Configs (pre-V1)
+
+* Move `config/orchard/data/*.json` into `config/orchard/packs/<your-pack>/data/`
+  and rename them to `.yaml` (the fields are identical, YAML is just a different
+  syntax).
+* Move `config/orchard/nbt/*` into your pack's `nbt/` folder.
+* Add a `pack.yaml` to the pack folder.
+* Your old `data/` and `nbt/` folders are no longer read; the bundled pack now
+  lives at `config/orchard/bundled/`.

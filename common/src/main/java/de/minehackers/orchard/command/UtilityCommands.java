@@ -6,8 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.core.Vec3i;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
@@ -16,70 +16,58 @@ import de.minehackers.orchard.NbtTreePlacer;
 import de.minehackers.orchard.OrchardCommon;
 import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.OrchardRegistry;
-import de.minehackers.orchard.config.ConfigLoader;
+import de.minehackers.orchard.pack.Pack;
 
-/// Utility commands: reload, clearcache, validate, find, what.
+/// Grab-bag of /orchard subcommands: reload, clearcache, validate, find, what.
 public final class UtilityCommands {
 
     private UtilityCommands() {}
 
-    /// Reloads all definitions from disk with validation, then applies if valid.
+    /// Runs the whole pack pipeline again: parse, validate, resolve, activate.
     static int runReload(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
-        Path configDir = OrchardCommon.getConfigDirectory();
-        Path nbtDir = OrchardCommon.getNbtDirectory();
 
-        List<OrchardDefinition> defs;
+        if (de.minehackers.orchard.pack.PackManager.bootError() != null) {
+            StatusCommands.sendError(src,
+                    "Startup failed earlier - fixing the underlying problem first is required.");
+            StatusCommands.send(src, "Reason: " + de.minehackers.orchard.pack.PackManager.bootError());
+            StatusCommands.send(src, "After fixing it, restart the server or try this command again.");
+        }
+
+        Pack pack;
         try {
-            defs = ConfigLoader.loadAll(configDir);
+            pack = de.minehackers.orchard.pack.PackManager.reload();
         } catch (Exception e) {
-            StatusCommands.sendError(src, "Failed to load configs: " + e.getMessage());
-            Constants.LOG.error("[Orchard] Reload load failed: {}", e.getMessage());
+            StatusCommands.sendError(src, "Reload failed: " + e.getMessage());
+            Constants.LOG.error("[Orchard] Reload failed: {}", e.getMessage(), e);
             return 0;
         }
 
-        StatusCommands.send(src, "Validating " + defs.size() + " definition(s)...");
-
-        int warnings = 0;
-        int errors = 0;
-
-        for (OrchardDefinition def : defs) {
-            Path filePath = nbtDir.resolve(def.getNbtFileName());
-            if (!Files.exists(filePath)) {
-                StatusCommands.sendError(src, "  MISSING: " + def.getNbtFileName());
-                errors++;
-            } else {
-                try {
-                    long size = Files.size(filePath);
-                    if (size == 0) {
-                        StatusCommands.sendError(src, "  EMPTY: " + def.getNbtFileName());
-                        errors++;
-                    } else if (size > Constants.MAX_NBT_FILE_SIZE) {
-                        StatusCommands.sendError(src, "  TOO LARGE: " + def.getNbtFileName()
-                            + " (" + size + " bytes)");
-                        errors++;
-                    }
-                } catch (Exception e) {
-                    StatusCommands.sendError(src, "  UNREADABLE: " + def.getNbtFileName());
-                    errors++;
+        switch (pack.source()) {
+            case PACKS -> {
+                StatusCommands.send(src, "Reloaded pack '" + pack.metadata().name()
+                        + "' with " + pack.definitions().size() + " definition(s).");
+                if (de.minehackers.orchard.pack.PackManager.settings().isAutoSelect()) {
+                    StatusCommands.send(src, "Tip: set 'pack.selected' in orchard.yaml to pin a pack.");
                 }
+                return pack.definitions().size();
+            }
+            case BUNDLED -> {
+                StatusCommands.send(src, "No user pack found - using the built-in defaults ("
+                        + pack.definitions().size() + " definition(s)).");
+                return pack.definitions().size();
+            }
+            case NONE -> {
+                StatusCommands.sendError(src,
+                        "No valid pack found - vanilla world generation is active.");
+                StatusCommands.send(src, "Check the log for details and look at: "
+                        + OrchardCommon.getPackDirectory());
+                return 0;
+            }
+            default -> {
+                return 0;
             }
         }
-
-        if (errors > 0) {
-            StatusCommands.sendError(src, errors + " error(s) found. Reload aborted to prevent issues.");
-            StatusCommands.send(src, "Fix the issues above and try again.");
-            Constants.LOG.warn("[Orchard] Reload aborted: {} error(s) in definitions.", errors);
-            return 0;
-        }
-
-        OrchardRegistry.clearAndRegisterAll(defs);
-        NbtTreePlacer.clearCache();
-
-        StatusCommands.send(src, "Reloaded " + defs.size() + " definition(s) successfully."
-            + (warnings > 0 ? " (" + warnings + " warning(s))" : ""));
-        Constants.LOG.info("[Orchard] Reloaded {} definition(s) via command.", defs.size());
-        return defs.size();
     }
 
     static int runClearCache(CommandContext<CommandSourceStack> ctx) {
@@ -90,7 +78,9 @@ public final class UtilityCommands {
         return 1;
     }
 
-    /// Checks all definitions for missing files, empty files, and parse errors.
+    /// Sanity-checks every definition: NBT present on disk, non-empty,
+    /// parseable, sane dimensions. Prints a report and returns the number of
+    /// problems found.
     static int runValidate(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         List<OrchardDefinition> defs = OrchardRegistry.getAll();
@@ -99,6 +89,14 @@ public final class UtilityCommands {
         StatusCommands.send(src, "==============================");
         StatusCommands.send(src, "      Orchard Validation");
         StatusCommands.send(src, "==============================");
+
+        Pack pack = de.minehackers.orchard.pack.PackManager.activePack();
+        switch (pack.source()) {
+            case PACKS -> StatusCommands.send(src, "Pack: " + pack.metadata().name()
+                    + " (" + pack.root().getFileName() + ")");
+            case BUNDLED -> StatusCommands.send(src, "Source: built-in defaults (" + pack.root().getFileName() + "/)");
+            case NONE -> StatusCommands.sendError(src, "No pack is active - nothing to validate.");
+        }
 
         int errors = 0;
 
@@ -136,7 +134,7 @@ public final class UtilityCommands {
                                 StatusCommands.sendError(src, "PARSE FAILED: " + def.getNbtFileName());
                                 errors++;
                             } else {
-                                Vec3i size = template.getSize();
+                                var size = template.getSize();
                                 if (size.getX() <= 0 || size.getY() <= 0 || size.getZ() <= 0) {
                                     StatusCommands.sendError(src, "INVALID SIZE: " + def.getNbtFileName()
                                         + " (" + size.getX() + "x" + size.getY() + "x" + size.getZ() + ")");
@@ -161,15 +159,16 @@ public final class UtilityCommands {
         return errors;
     }
 
-    /// Searches definitions and NBT files matching a query string.
+    /// Case-insensitive substring search across registered definitions and the
+    /// loose .nbt files in the nbt directory.
     static int runFind(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
-        String query = StringArgumentType.getString(ctx, "name").toLowerCase();
+        String query = StringArgumentType.getString(ctx, "name").toLowerCase(Locale.ROOT);
 
         List<OrchardDefinition> allDefs = OrchardRegistry.getAll();
         List<OrchardDefinition> matched = new ArrayList<>();
         for (OrchardDefinition def : allDefs) {
-            if (def.getNbtFileName().toLowerCase().contains(query)) {
+            if (def.getNbtFileName().toLowerCase(Locale.ROOT).contains(query)) {
                 matched.add(def);
             }
         }
@@ -178,11 +177,11 @@ public final class UtilityCommands {
         List<String> nbtFiles = new ArrayList<>();
         try {
             try (var stream = Files.list(nbtDir)) {
-                stream.filter(p -> p.toString().toLowerCase().contains(query))
+                stream.filter(p -> p.toString().toLowerCase(Locale.ROOT).contains(query))
                       .forEach(p -> nbtFiles.add(nbtDir.relativize(p).toString()));
             }
         } catch (Exception e) {
-            // directory might not exist
+            // no nbt dir means nothing to search, that's fine
         }
 
         StatusCommands.send(src, "==============================");
@@ -213,7 +212,8 @@ public final class UtilityCommands {
         return matched.size() + nbtFiles.size();
     }
 
-    /// Shows current biome and which definitions match it.
+    /// "Where am I, and what would grow here?" - prints your biome and every
+    /// definition that matches it.
     static int runWhat(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         if (!src.isPlayer()) {
