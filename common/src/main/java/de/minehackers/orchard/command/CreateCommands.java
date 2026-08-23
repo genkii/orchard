@@ -11,12 +11,13 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import de.minehackers.orchard.CompactTemplate;
 import de.minehackers.orchard.Constants;
 import de.minehackers.orchard.OrchardCommon;
 
@@ -97,8 +98,8 @@ public final class CreateCommands {
 
             CompoundTag nbt = template.save(new CompoundTag());
             Vec3i actualSize = template.getSize();
-            int blockCount = template.filterBlocks(BlockPos.ZERO, new StructurePlaceSettings(),
-                null).size();
+            int blockCount = CompactTemplate.countNonAirBlocks(nbt,
+                    level.registryAccess().lookupOrThrow(Registries.BLOCK));
 
             try (OutputStream out = Files.newOutputStream(filePath)) {
                 NbtIo.writeCompressed(nbt, out);

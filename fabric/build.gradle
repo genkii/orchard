@@ -13,7 +13,10 @@ dependencies {
     minecraft("com.mojang:minecraft:${minecraft_version}")
     implementation("net.fabricmc:fabric-loader:${fabric_loader_version}")
     implementation("net.fabricmc.fabric-api:fabric-api:${fabric_version}")
-    // Embed the YAML parser into the mod JAR (Fabric Jar-in-Jar)
+    // Embed the YAML parser into the mod JAR (Fabric Jar-in-Jar). The plain
+    // implementation line is required for it to be visible in dev runs -
+    // include() only affects the packaged JAR.
+    implementation("org.yaml:snakeyaml:${snakeyaml_version}")
     include("org.yaml:snakeyaml:${snakeyaml_version}")
     // Mod Menu - compile against its Java API only; optional at runtime and
     // Fabric-only. MC 26.1+ mods ship unmapped, so a plain dependency works.

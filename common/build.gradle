@@ -23,6 +23,14 @@ dependencies {
 
     // YAML parsing for packs (embedded into both loader JARs, see their build scripts)
     api("org.yaml:snakeyaml:${snakeyaml_version}")
+
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
 }
 
 configurations {
@@ -58,4 +66,14 @@ sourceSets.configureEach {
             }
         }
     }
+}
+
+// Wire Minecraft onto the test classpath: ModDevGradle only injects it into
+// main, but CompactTemplate's parser is exactly the kind of code that needs
+// plain unit tests.
+configurations.testCompileClasspath {
+    extendsFrom(configurations.compileClasspath)
+}
+configurations.testRuntimeClasspath {
+    extendsFrom(configurations.runtimeClasspath)
 }

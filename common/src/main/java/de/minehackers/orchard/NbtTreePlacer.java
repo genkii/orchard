@@ -25,11 +25,10 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /// Swaps vanilla trees for NBT structure templates. Each file is read once,
-/// converted to a CompactTemplate with pre-rotated offsets, and kept in a
+/// converted into a CompactTemplate with pre-rotated offsets, and kept in a
 /// bounded cache - placing one afterwards is just a tight loop over flat data.
 /// All the surface checks (terrain, spacing, obstructions) run before anything
 /// gets placed; if any fail, vanilla generation carries on untouched.
@@ -38,7 +37,7 @@ public final class NbtTreePlacer {
     private NbtTreePlacer() {}
 
     private static final CompactTemplate FAILED_LOAD_SENTINEL = new CompactTemplate(
-            Vec3i.ZERO, new net.minecraft.world.level.block.state.BlockState[0], new java.util.List[0]);
+            Vec3i.ZERO, new CompactTemplate.Layer[0]);
     private static final int MAX_CACHE_SIZE = 256;
     private static final Map<String, CompactTemplate> CACHE = new ConcurrentHashMap<>(16);
     private static final Map<String, Long> CACHE_ACCESS_TIMES = new ConcurrentHashMap<>(16);
@@ -134,9 +133,8 @@ public final class NbtTreePlacer {
 
         try (InputStream in = Files.newInputStream(filePath)) {
             CompoundTag nbt = NbtIo.readCompressed(in, NbtAccounter.unlimitedHeap());
-            StructureTemplate template = new StructureTemplate();
-            template.load(level.registryAccess().lookupOrThrow(Registries.BLOCK), nbt);
-            CompactTemplate compact = CompactTemplate.fromStructureTemplate(template);
+            CompactTemplate compact = CompactTemplate.fromNbt(nbt,
+                    level.registryAccess().lookupOrThrow(Registries.BLOCK));
             Constants.LOG.info("[Orchard] Loaded {} (size: {}, blocks: {})",
                     fileName, compact.getSize(), compact.getBlockCount());
             return compact;
@@ -391,8 +389,8 @@ public final class NbtTreePlacer {
         }
 
         CompactTemplate template = getOrLoad(def, level);
-        if (template == null) {
-            Constants.LOG.warn("[Orchard] Template null for {} - falling back to vanilla",
+        if (template == null || template.getBlockCount() == 0) {
+            Constants.LOG.warn("[Orchard] Template missing or empty for {} - falling back to vanilla",
                     def.getNbtFileName());
             return;
         }
