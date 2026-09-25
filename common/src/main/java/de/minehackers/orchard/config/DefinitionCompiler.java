@@ -16,13 +16,7 @@ import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.pack.DynamicReferences;
 import de.minehackers.orchard.pack.PackLoadException;
 
-/// Turns raw definitions into ready-to-run OrchardDefinitions - the "resolve"
-/// stage of the V1 pipeline (load, parse, validate, resolve, active). Everything
-/// resolvable eagerly (blocks, matchers, predicates) is built up front so world
-/// gen never parses or does registry lookups at runtime. Identifiers living in
-/// dynamic registries (biomes, dimensions, features) are collected
-/// for existence validation at server start; an unknown id only costs a
-/// warning, never the whole pack.
+/// Resolves raw definitions into ready-to-run OrchardDefinitions.
 public final class DefinitionCompiler {
 
     /// Keeps NBT file names sane: rejects path traversal and odd characters.

@@ -1,6 +1,6 @@
 package de.minehackers.orchard.pack;
 
-/// Thrown whenever a pack - or something inside it - fails to load.
+/// Thrown when a pack or an entry inside it fails to load.
 public final class PackLoadException extends RuntimeException {
 
     public PackLoadException(String message) {

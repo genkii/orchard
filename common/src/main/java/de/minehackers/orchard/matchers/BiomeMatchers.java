@@ -8,8 +8,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 
-/// Biome predicates for the config parser: tag-based constants, exact biome
-/// matches, and a few handy pre-combined sets.
+/// Biome predicates for config parsing: tags, exact biomes, and combined sets.
 public final class BiomeMatchers {
 
     private BiomeMatchers() {}

@@ -15,12 +15,7 @@ import de.minehackers.orchard.matchers.BiomeMatchers;
 import de.minehackers.orchard.pack.DynamicReferences;
 import de.minehackers.orchard.pack.PackLoadException;
 
-/// Compiles biomes selectors into biome-matching predicates. Accepts shorthand
-/// vanilla names (forest, plains, ...), tags prefixed with # (#minecraft:is_forest,
-/// or just #is_forest for the minecraft namespace), full biome ids, the
-/// any_of/all_of/not combinator mappings, and plain lists (treated as any_of).
-/// Biome and tag ids are reported to the given collector for existence checks
-/// at server start; unknown ids only cost a warning, never the whole pack.
+/// Compiles biome selectors into biome-matching predicates.
 final class BiomeFilterParser {
 
     private BiomeFilterParser() {}

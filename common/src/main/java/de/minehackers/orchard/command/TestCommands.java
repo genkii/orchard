@@ -28,9 +28,7 @@ public final class TestCommands {
 
     private TestCommands() {}
 
-    /// Debug helper: drops the NBT centered on the player, printing the
-    /// pre-placement checks first so pack authors can see exactly why
-    /// world-gen would (or wouldn't) accept this spot.
+    /// Places the NBT centered on the player after printing pre-placement checks.
     static int runTest(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         if (!src.isPlayer()) {
@@ -137,8 +135,7 @@ public final class TestCommands {
         }
     }
 
-    /// Reads an NBT file into a StructureTemplate. Refuses oversized or empty
-    /// files; returns null on any failure, with the reason in the log.
+    /// Loads an NBT file into a template, null on oversized, empty, or parse failure.
     static StructureTemplate loadTemplate(Path filePath, ServerLevel level) {
         try {
             long fileSize = Files.size(filePath);

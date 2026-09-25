@@ -5,10 +5,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/// Screen behind Mod Menu's config button. Orchard is configured through
-/// files in config/orchard and /orchard commands on the server - there is no
-/// client-side settings model - so this screen points at those instead of
-/// pretending to have options.
+/// Info screen for Mod Menu pointing at config files and server commands.
 public final class OrchardConfigScreen extends Screen {
 
     private static final int WHITE = 0xFFFFFFFF;

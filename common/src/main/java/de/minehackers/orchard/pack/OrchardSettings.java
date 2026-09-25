@@ -13,13 +13,10 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
 import de.minehackers.orchard.Constants;
 import de.minehackers.orchard.config.YamlValues;
 
-/// User settings from config/orchard/orchard.yaml. The file is written from
-/// a built-in template on first run. Unknown keys earn a warning, and any
-/// value we can't make sense of falls back to its default - a broken config
-/// must never stop the game from starting.
+/// User settings loaded from config/orchard/orchard.yaml, falling back to defaults on errors.
 public final class OrchardSettings {
 
-    /// Sentinel for "just use the first valid pack, in deterministic order".
+    /// Sentinel selecting the first valid pack in deterministic order.
     public static final String AUTO = "auto";
 
     private static final String DEFAULT_FILE = """
@@ -57,7 +54,7 @@ public final class OrchardSettings {
         return new OrchardSettings(AUTO, 0.025f, 0.10);
     }
 
-    /// Reads orchard.yaml, writing the built-in default file on first run.
+    /// Loads orchard.yaml, writing the default file on first run.
     public static OrchardSettings load(Path orchardDir) {
         Path file = orchardDir.resolve("orchard.yaml");
         OrchardSettings settings = withDefaults();
@@ -140,7 +137,7 @@ public final class OrchardSettings {
         return Math.max(min, Math.min(max, value));
     }
 
-    /// Either 'auto' or an explicit pack name.
+    /// Selected pack name, either "auto" or an explicit pack directory name.
     public String selectedPack() {
         return selectedPack;
     }

@@ -8,10 +8,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.core.BlockPos;
 
-/// Keeps track of where trees have been placed, bucketed by chunk. Each
-/// chunk's entries are further split by NBT path, so spacing queries only ever
-/// look at the tree type they care about. Old chunks get pruned occasionally
-/// so the map can't grow forever.
+/// Chunk-bucketed record of tree placements for spacing checks, with occasional pruning of old chunks.
 final class PlacementIndex {
 
     private PlacementIndex() {}
@@ -20,7 +17,7 @@ final class PlacementIndex {
     private static final long CHUNK_MAX_AGE_MS = 30L * 60 * 1000;
     private static final AtomicInteger placementCounter = new AtomicInteger();
 
-    /// chunkKey -> (nbtPath -> set of packed block positions)
+    /// Maps a chunk to its NBT-path-keyed sets of packed block positions.
     private static final ConcurrentMap<Long, ConcurrentHashMap<String, Set<Long>>> CHUNK_INDEX =
             new ConcurrentHashMap<>(64);
     private static final ConcurrentMap<Long, Long> CHUNK_ACCESS_TIMES =
@@ -39,8 +36,7 @@ final class PlacementIndex {
         }
     }
 
-    /// True if the same template went down within radius of origin. Horizontal
-    /// distance only - Y differences are deliberately ignored.
+    /// True if the same template was placed within radius (horizontal distance only).
     public static boolean hasNearbyPlacement(String nbtPath, BlockPos origin, int radius) {
         int chunkRadius = (radius >> 4) + 1;
         int originChunkX = origin.getX() >> 4;
@@ -72,7 +68,7 @@ final class PlacementIndex {
         placementCounter.set(0);
     }
 
-    /// One-liner for the stats command.
+    /// One-line summary for the stats command.
     public static String getStats() {
         int chunks = CHUNK_INDEX.size();
         int placements = 0;

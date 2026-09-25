@@ -10,9 +10,7 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlac
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessor;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
-/// Keeps tree placement from wrecking the landscape: air blocks inside the
-/// structure are dropped outright, and bedrock or lava already at a target
-/// position is never overwritten. Anything else gets placed as usual.
+/// Drops structure air and never overwrites bedrock or lava at the target position.
 final class TerrainPreservingProcessor implements StructureProcessor {
 
     static final TerrainPreservingProcessor INSTANCE = new TerrainPreservingProcessor();

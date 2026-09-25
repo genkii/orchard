@@ -28,16 +28,12 @@ import net.minecraft.world.level.levelgen.feature.trunkplacers.MegaJungleTrunkPl
 import net.minecraft.world.level.levelgen.feature.trunkplacers.TrunkPlacer;
 import net.minecraft.world.level.levelgen.feature.trunkplacers.UpwardsBranchingTrunkPlacer;
 
-/// Ready-made matchers the config parsers use to recognise specific tree,
-/// fungus and mushroom types.
+/// Ready-made tree, fungus, and mushroom matchers for config parsers.
 public final class TreeMatchers {
 
     private TreeMatchers() {}
 
-    /// Throwaway RandomSource for sampling block state providers. Deliberately
-    /// NOT the feature's own random: matching must never perturb the world's
-    /// random stream. ThreadLocal because worldgen runs on worker threads and
-    /// RandomSource is not thread-safe.
+    /// Throwaway thread-local RandomSource for sampling without perturbing worldgen.
     private static final ThreadLocal<RandomSource> FIXED_RANDOM =
             ThreadLocal.withInitial(() -> RandomSource.create(0L));
 
@@ -152,8 +148,7 @@ public final class TreeMatchers {
         return (config, level) -> cls.isInstance(config.trunkPlacer());
     }
 
-    /// Samples the trunk provider and compares against the block. A sampling
-    /// error counts as "not a match".
+    /// Samples the trunk provider against the block, mismatch on sampling error.
     public static BiPredicate<TreeFeature, WorldGenLevel> byTrunkBlock(Block block) {
         return (config, level) -> {
             try {

@@ -18,8 +18,7 @@ public final class CommandRegistry {
 
     private CommandRegistry() {}
 
-    /// Tab completion for NBT names: registered definitions plus any loose
-    /// .nbt files sitting in the nbt directory.
+    /// Tab completion for NBT names from definitions and loose .nbt files.
     private static final SuggestionProvider<CommandSourceStack> NBT_FILE_SUGGESTIONS =
         (ctx, builder) -> {
             var defs = OrchardRegistry.getAll();

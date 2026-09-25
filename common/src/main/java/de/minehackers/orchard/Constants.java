@@ -3,7 +3,7 @@ package de.minehackers.orchard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/// Shared constants so we don't repeat ourselves everywhere.
+/// Shared mod constants (id, name, logger, NBT size limit).
 public final class Constants {
 
     private Constants() {}

@@ -26,11 +26,7 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/// Swaps vanilla trees for NBT structure templates. Each file is read once,
-/// converted into a CompactTemplate with pre-rotated offsets, and kept in a
-/// bounded cache - placing one afterwards is just a tight loop over flat data.
-/// All the surface checks (terrain, spacing, obstructions) run before anything
-/// gets placed; if any fail, vanilla generation carries on untouched.
+/// Replaces vanilla trees with cached NBT structure templates after surface and spacing checks.
 public final class NbtTreePlacer {
 
     private NbtTreePlacer() {}
@@ -79,9 +75,7 @@ public final class NbtTreePlacer {
         Constants.LOG.info("[Orchard] Cache pre-warmed: {} template(s) loaded, {} missing.", loaded, missing);
     }
 
-    /// Fetches a template from cache, reading and converting the NBT on first
-    /// use. Failed loads are remembered too, so a broken file doesn't get
-    /// retried on every single tree.
+    /// Returns the cached template, loading and compacting the NBT on first use.
     @Nullable
     public static CompactTemplate getOrLoad(OrchardDefinition def, ServerLevelAccessor level) {
         // Key by the resolved file path: different packs may ship files with
@@ -105,7 +99,7 @@ public final class NbtTreePlacer {
         return result;
     }
 
-    /// Reads one NBT file and compacts it. Null if missing, oversized or broken.
+    /// Reads one NBT file and compacts it, or null if missing, oversized, or broken.
     @Nullable
     private static CompactTemplate tryLoadAndCompact(String fileName, Path nbtDir, ServerLevelAccessor level) {
         Path filePath = nbtDir.resolve(fileName);
@@ -166,7 +160,7 @@ public final class NbtTreePlacer {
             + ", evictions=" + CACHE_EVICTIONS.get();
     }
 
-    /// Multi-line breakdown for the /orchard stats command.
+    /// Multi-line cache and placement breakdown for the stats command.
     public static String[] getDetailedStats() {
         long hits = CACHE_HITS.get();
         long misses = CACHE_MISSES.get();
@@ -191,8 +185,7 @@ public final class NbtTreePlacer {
         return PlacementIndex.hasNearbyPlacement(nbtPath, origin, radius);
     }
 
-    /// Scans a cylinder around origin for log blocks, complementing the
-    /// placement index when enforcing spacing.
+    /// Scans a cylinder around origin for log blocks to enforce spacing.
     public static boolean hasNearbyLog(ServerLevelAccessor level, BlockPos origin, int radius) {
         long r2 = (long) radius * radius;
         int originChunkX = origin.getX() >> 4;
@@ -221,7 +214,7 @@ public final class NbtTreePlacer {
         return false;
     }
 
-    /// Only bedrock and lava count as blocking the trunk column.
+    /// True unless bedrock or lava blocks the trunk column.
     public static boolean isTrunkClear(ServerLevelAccessor level, BlockPos origin, int height) {
         BlockPos.MutableBlockPos check = origin.mutable();
         for (int dy = 0; dy < height; dy++) {
@@ -234,7 +227,7 @@ public final class NbtTreePlacer {
         return true;
     }
 
-    /// Origin must rest on solid ground with nothing solid above it.
+    /// True when origin rests on solid ground with nothing solid above it.
     public static boolean isOnSurface(ServerLevelAccessor level, BlockPos origin) {
         BlockState originState = level.getBlockState(origin);
         if (originState.isSolid()) {
@@ -256,8 +249,7 @@ public final class NbtTreePlacer {
         return true;
     }
 
-    /// Rejects footprints that are too enclosed - keeps trees out of villages
-    /// and similar builds.
+    /// Rejects footprints that are too enclosed to keep trees out of builds.
     public static boolean isPlacementClear(ServerLevelAccessor level, BlockPos origin, Vec3i structureSize) {
         int radius = Math.min(Math.max(structureSize.getX(), structureSize.getZ()) / 2, 8);
         int r2 = radius * radius;
@@ -315,8 +307,7 @@ public final class NbtTreePlacer {
         return state.isSolid();
     }
 
-    /// Walks the origin down through replaceable blocks (snow layers and such)
-    /// until it lands on real ground.
+    /// Walks origin down through replaceable blocks until it lands on real ground.
     public static BlockPos groundAdjust(ServerLevelAccessor level, BlockPos origin, int maxDown) {
         BlockPos.MutableBlockPos mutable = origin.mutable();
         for (int i = 0; i < maxDown; i++) {
@@ -343,9 +334,7 @@ public final class NbtTreePlacer {
         }
     }
 
-    /// Shared guts of the tree/fungus/mushroom hooks: run all the placement
-    /// checks, stamp down our template instead, and tell vanilla not to bother.
-    /// If anything fails a check we just return and vanilla proceeds normally.
+    /// Runs all placement checks and stamps down the template, else lets vanilla proceed.
     public static void tryIntercept(
             RandomSource random,
             CallbackInfoReturnable<Boolean> cir,

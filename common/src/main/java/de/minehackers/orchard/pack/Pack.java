@@ -6,10 +6,7 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 import de.minehackers.orchard.OrchardDefinition;
 
-/// A pack that's fully loaded: metadata plus compiled, ready-to-use
-/// definitions. By the time one of these exists, parsing, validation and
-/// identifier resolution are all done - worldgen only ever reads the
-/// finished product stored here.
+/// Fully loaded pack with metadata and compiled ready-to-use definitions.
 public final class Pack {
 
     private final PackMetadata metadata;
@@ -27,7 +24,7 @@ public final class Pack {
         this.references = references == null ? DynamicReferences.EMPTY : references;
     }
 
-    /// Placeholder for "nothing loaded" - keeps worldgen vanilla.
+    /// Empty placeholder pack keeping worldgen vanilla when nothing is loaded.
     public static Pack vanilla() {
         return new Pack(
                 new PackMetadata("vanilla", PackMetadata.SUPPORTED_FORMAT, "", ""),
@@ -38,8 +35,7 @@ public final class Pack {
         return metadata;
     }
 
-    /// Where the pack lives on disk (a packs/<name> folder or the bundled
-    /// dir). Empty path for the vanilla placeholder.
+    /// Pack root directory on disk, empty path for the vanilla placeholder.
     public Path root() {
         return root;
     }

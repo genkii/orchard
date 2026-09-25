@@ -14,9 +14,7 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
 import de.minehackers.orchard.Constants;
 import de.minehackers.orchard.pack.PackLoadException;
 
-/// Reads pack data files (.yaml) into raw definitions. A file holds either a
-/// single definition mapping or a list of them. Nothing here touches Minecraft
-/// classes; the output is a plain model that gets compiled later.
+/// Reads pack data files (.yaml) into raw definitions.
 public final class DataFileParser {
 
     private static final Set<String> KNOWN_KEYS = Set.of(
@@ -28,9 +26,7 @@ public final class DataFileParser {
 
     private DataFileParser() {}
 
-    /// Reads one data file from disk and decodes it. Unreadable files and broken
-    /// YAML both surface as a PackLoadException instead of leaking IO or
-    /// snakeyaml errors.
+    /// Reads one data file from disk and decodes it into raw definitions.
     public static List<RawDefinition> parseFile(Path file) {
         String context = file.getFileName().toString();
         try {
@@ -63,8 +59,7 @@ public final class DataFileParser {
         return fromRoot(root, context);
     }
 
-    /// Turns an already-decoded YAML document (single mapping or list) into
-    /// definitions.
+    /// Converts a decoded YAML document into raw definitions.
     public static List<RawDefinition> fromRoot(Object root, String context) {
         List<RawDefinition> out = new ArrayList<>();
         if (root instanceof Map<?, ?> single) {
@@ -92,8 +87,7 @@ public final class DataFileParser {
         return context + " entry #" + (index + 1);
     }
 
-    /// Builds one raw definition from a single YAML mapping. Unknown fields only
-    /// log a warning and get dropped; weight must be >= 1, min_spacing >= 0.
+    /// Builds one raw definition from a single YAML mapping.
     public static RawDefinition fromMap(Map<?, ?> map, String where) {
         for (Object key : map.keySet()) {
             if (!KNOWN_KEYS.contains(String.valueOf(key))) {

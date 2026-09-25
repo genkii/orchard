@@ -19,11 +19,7 @@ import de.minehackers.orchard.NbtTreePlacer;
 import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.OrchardRegistry;
 
-/// Same idea as the tree mixin but for huge mushrooms: inject at HEAD of
-/// place(), cancel and replace whenever a pack definition matches. Naturally
-/// generated ones only - bone-mealed small mushrooms show up as a red/brown
-/// mushroom block at the origin and we let those pass. We also insist on dirt
-/// or mycelium ground, the same rule vanilla uses.
+/// Replaces natural huge mushrooms with NBT structures via HEAD hook on place().
 @Mixin(AbstractHugeMushroomFeature.class)
 public class HugeMushroomFeatureMixin {
 

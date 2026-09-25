@@ -16,9 +16,7 @@ import net.minecraft.world.level.levelgen.feature.HugeFungusFeature;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import org.jspecify.annotations.Nullable;
 
-/// Describes how one NBT structure file replaces trees, fungi or huge mushrooms,
-/// with optional filters for biome, dimension, height and floor. Build one via
-/// the fluent builder returned by forNbt().
+/// One NBT structure replacement rule with optional biome, dimension, height, and floor filters.
 public final class OrchardDefinition {
 
     private final String nbtFileName;
@@ -118,12 +116,12 @@ public final class OrchardDefinition {
         return hugeMushroomWorldGenMatcher != null && hugeMushroomWorldGenMatcher.test(config, level);
     }
 
-    /// With no biome filter set, every biome matches.
+    /// Matches every biome when no biome filter is set.
     public boolean matchesBiome(Holder<Biome> biome) {
         return biomeMatcher == null || biomeMatcher.test(biome);
     }
 
-    /// An empty dimensions set matches everywhere.
+    /// Empty dimensions set matches every dimension.
     public boolean matchesDimension(ResourceKey<Level> dimensionKey) {
         return dimensions.isEmpty() || dimensions.contains(dimensionKey);
     }
@@ -132,7 +130,7 @@ public final class OrchardDefinition {
         return minY != Integer.MIN_VALUE || maxY != Integer.MAX_VALUE;
     }
 
-    /// Unrestricted unless the builder set bounds.
+    /// Checks y against the optional builder-set bounds (unrestricted by default).
     public boolean matchesYRange(int y) {
         return y >= minY && y <= maxY;
     }
@@ -233,12 +231,12 @@ public final class OrchardDefinition {
             return this;
         }
 
-        /// Convenience wrapper: dirt-family floor required.
+        /// Requires a dirt-family block as floor.
         public Builder onDirt() {
             return validFloor(state -> state.is(BlockTags.DIRT));
         }
 
-        /// Convenience wrapper: nylium floor required.
+        /// Requires a nylium block as floor.
         public Builder onNylium() {
             return validFloor(state -> state.is(BlockTags.NYLIUM));
         }

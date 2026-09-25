@@ -12,9 +12,7 @@ import de.minehackers.orchard.matchers.TreeMatchers;
 import de.minehackers.orchard.pack.DynamicReferences;
 import de.minehackers.orchard.pack.PackLoadException;
 
-/// Compiles mushroom_type selectors into mushroom-matching predicates. Accepts
-/// the shorthand names red/brown/any, a list of them, or any feature
-/// id such as minecraft:huge_red_mushroom.
+/// Compiles mushroom_type selectors into mushroom-matching predicates.
 final class MushroomTypeParser {
 
     private MushroomTypeParser() {}

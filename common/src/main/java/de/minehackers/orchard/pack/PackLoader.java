@@ -19,12 +19,7 @@ import de.minehackers.orchard.config.DataFileParser;
 import de.minehackers.orchard.config.DefinitionCompiler;
 import de.minehackers.orchard.config.RawDefinition;
 
-/// Turns a pack directory into a Pack. Content problems are handled
-/// leniently: broken files or definitions are logged and skipped so one
-/// bad apple can't sink the rest of the pack. Structural problems
-/// (missing/corrupt pack.yaml, unsupported format, nothing loadable)
-/// reject the whole directory. The extracted defaults use loadBundled()
-/// instead - they're plain data/ + nbt/ without a metadata file.
+/// Turns a pack directory into a Pack, skipping broken files while rejecting invalid pack structure.
 final class PackLoader {
 
     private PackLoader() {}
@@ -44,8 +39,7 @@ final class PackLoader {
         }
     }
 
-    /// Loads a normal user pack. pack.yaml is required here - a directory
-    /// without one is not treated as a pack at all.
+    /// Loads a user pack, requiring pack.yaml in the directory.
     static Result load(Path dir, PackSource source) {
         if (!Files.isDirectory(dir)) {
             return Result.fail("not a directory");
@@ -72,8 +66,7 @@ final class PackLoader {
         return loadContents(dir, source, metadata);
     }
 
-    /// Loads the extracted built-in defaults: data/ plus nbt/, and that's it.
-    /// No pack.yaml exists for these - the metadata is synthesised on the spot.
+    /// Loads extracted built-in defaults with synthesised metadata instead of pack.yaml.
     static Result loadBundled(Path dir) {
         if (!Files.isDirectory(dir)) {
             return Result.fail("not a directory");
@@ -138,7 +131,7 @@ final class PackLoader {
         return Result.ok(pack);
     }
 
-    /// yaml/yml files go to the YAML parser; anything else is rejected.
+    /// Parses a YAML data file, rejecting unsupported file extensions.
     private static List<RawDefinition> parseDataFile(Path file) {
         String name = file.getFileName().toString();
         if (name.endsWith(".yaml") || name.endsWith(".yml")) {

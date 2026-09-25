@@ -21,14 +21,12 @@ import de.minehackers.orchard.CompactTemplate;
 import de.minehackers.orchard.Constants;
 import de.minehackers.orchard.OrchardCommon;
 
-/// The /orchard create subcommand - captures a region of the world into an
-/// NBT file that can later become a tree definition.
+/// Captures a world region into an NBT file for tree definitions.
 public final class CreateCommands {
 
     private CreateCommands() {}
 
-    /// Copies the box between pos1 and pos2 (inclusive) into a fresh template
-    /// and writes it compressed to the generated directory.
+    /// Copies the pos1-pos2 box into a template and writes it to the generated directory.
     static int runCreate(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         if (!src.isPlayer()) {

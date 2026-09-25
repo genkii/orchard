@@ -3,10 +3,7 @@ package de.minehackers.orchard.config;
 import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
-/// Format-independent snapshot of one tree/fungus/mushroom replacement exactly
-/// as parsed from a pack file. The selector fields still hold the raw nodes
-/// (String/Map/List) as authored; DefinitionCompiler turns them into runtime
-/// matchers later, keeping parsing, validation and resolution separate stages.
+/// Format-independent snapshot of one replacement as parsed from a pack file.
 public record RawDefinition(
         String nbt,
         @Nullable Object treeType,

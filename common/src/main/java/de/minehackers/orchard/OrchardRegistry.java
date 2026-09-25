@@ -13,10 +13,7 @@ import net.minecraft.world.level.levelgen.feature.HugeFungusFeature;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import org.jspecify.annotations.Nullable;
 
-/// Global registry of orchard definitions, safe to hit from multiple threads.
-/// Reads take the StampedLock optimistic path so worldgen pays essentially
-/// nothing, and definitions are partitioned by type so the pick methods only
-/// ever scan what they need.
+/// Thread-safe global registry of orchard definitions, partitioned by feature type.
 public final class OrchardRegistry {
 
     private OrchardRegistry() {}
@@ -129,9 +126,7 @@ public final class OrchardRegistry {
         return pickWeighted(pool, random);
     }
 
-    /// Weighted random pick. Rare defs only enter through a small side pool
-    /// (2.5% chance), so marking one rare really keeps it rare even next to
-    /// common candidates - and even when it is the only candidate at all.
+    /// Weighted random pick with a small side pool keeping rare definitions rare.
     @Nullable
     static OrchardDefinition pickWeighted(List<OrchardDefinition> pool, RandomSource random) {
         int size = pool.size();

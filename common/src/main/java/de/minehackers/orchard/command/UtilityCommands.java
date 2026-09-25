@@ -78,9 +78,7 @@ public final class UtilityCommands {
         return 1;
     }
 
-    /// Sanity-checks every definition: NBT present on disk, non-empty,
-    /// parseable, sane dimensions. Prints a report and returns the number of
-    /// problems found.
+    /// Validates definitions for missing, empty, unparseable NBT and bad dimensions.
     static int runValidate(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         List<OrchardDefinition> defs = OrchardRegistry.getAll();
@@ -159,8 +157,7 @@ public final class UtilityCommands {
         return errors;
     }
 
-    /// Case-insensitive substring search across registered definitions and the
-    /// loose .nbt files in the nbt directory.
+    /// Case-insensitive substring search over definitions and loose .nbt files.
     static int runFind(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         String query = StringArgumentType.getString(ctx, "name").toLowerCase(Locale.ROOT);
@@ -212,8 +209,7 @@ public final class UtilityCommands {
         return matched.size() + nbtFiles.size();
     }
 
-    /// "Where am I, and what would grow here?" - prints your biome and every
-    /// definition that matches it.
+    /// Prints the player biome and matching definitions.
     static int runWhat(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         if (!src.isPlayer()) {

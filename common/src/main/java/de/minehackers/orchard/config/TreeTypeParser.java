@@ -21,12 +21,7 @@ import de.minehackers.orchard.matchers.TreeMatchers;
 import de.minehackers.orchard.pack.DynamicReferences;
 import de.minehackers.orchard.pack.PackLoadException;
 
-/// Compiles tree_type selectors into tree-matching predicates. Accepts a
-/// shorthand name (oak, birch, ...), a feature id for vanilla or
-/// modded trees (minecraft:fancy_oak, some-mod:some_tree), a filter mapping
-/// (foliage/trunk/trunk_block), or a list mixing any of those - a list matches
-/// if any entry matches. Feature ids land in the DynamicReferences collector so
-/// their existence gets checked once registries are available.
+/// Compiles tree_type selectors into tree-matching predicates.
 final class TreeTypeParser {
 
     private TreeTypeParser() {}
@@ -86,8 +81,7 @@ final class TreeTypeParser {
         return result;
     }
 
-    /// A shorthand alias maps to its built-in matcher; anything namespaced is
-    /// treated as a feature id.
+    /// Resolves shorthand names to matchers and namespaced names to feature ids.
     static BiPredicate<TreeFeature, WorldGenLevel> resolveName(
             String name, @Nullable DynamicReferences.Builder refs, String where) {
         if (name.indexOf(':') >= 0) {

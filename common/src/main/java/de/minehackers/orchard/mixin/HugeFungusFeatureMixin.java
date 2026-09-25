@@ -18,10 +18,7 @@ import de.minehackers.orchard.NbtTreePlacer;
 import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.OrchardRegistry;
 
-/// Swaps naturally generated huge fungi for NBT structures, again via a HEAD
-/// hook on place(). Player-planted fungi carry the planted flag in their
-/// feature (bone meal sets it) and are ignored. We only take over when the
-/// fungus sits on its configured valid base block.
+/// Replaces natural huge fungi with NBT structures via HEAD hook on place().
 @Mixin(HugeFungusFeature.class)
 public class HugeFungusFeatureMixin {
 

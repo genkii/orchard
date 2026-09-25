@@ -12,9 +12,7 @@ import de.minehackers.orchard.matchers.TreeMatchers;
 import de.minehackers.orchard.pack.DynamicReferences;
 import de.minehackers.orchard.pack.PackLoadException;
 
-/// Compiles fungus_type selectors into fungus-matching predicates. Accepts the
-/// shorthand names warped/crimson/any, a list of them, or any feature
-/// id such as some-mod:some_fungus.
+/// Compiles fungus_type selectors into fungus-matching predicates.
 final class FungusTypeParser {
 
     private FungusTypeParser() {}

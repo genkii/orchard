@@ -20,12 +20,7 @@ import de.minehackers.orchard.NbtTreePlacer;
 import de.minehackers.orchard.OrchardRegistry;
 import de.minehackers.orchard.matchers.FeatureIndex;
 
-/// Discovers, selects and activates packs. Selection walks a chain:
-/// user packs in config/orchard/packs (scanned alphabetically), then the
-/// bundled defaults from the JAR, and finally vanilla worldgen if nothing
-/// else worked. A pack.selected entry in orchard.yaml pins a specific
-/// pack, but when it can't be loaded we log the error and fall back to
-/// auto rather than ending up with nothing.
+/// Discovers, selects and activates packs, falling back to bundled defaults then vanilla.
 public final class PackManager {
 
     // All three are volatile: boot/reload swap them wholesale while other
@@ -37,8 +32,7 @@ public final class PackManager {
 
     private PackManager() {}
 
-    /// Startup: create the folder layout, read orchard.yaml, extract the
-    /// defaults, then choose and activate a pack.
+    /// Creates folder layout, loads settings and activates the selected pack at startup.
     public static void boot(Path configDir) {
         Path orchardDir = configDir.resolve("orchard");
         ensureDirectory(orchardDir);
@@ -56,21 +50,17 @@ public final class PackManager {
         bootError = null;
     }
 
-    /// Remembers why startup failed, so commands can tell the user instead of
-    /// silently acting like a vanilla-placeholder install.
+    /// Records the startup failure message for display by commands.
     public static void recordBootFailure(String message) {
         bootError = message;
     }
 
-    /// Non-null when init failed; check before assuming anything works.
+    /// Startup failure message, or null when initialization succeeded.
     public static String bootError() {
         return bootError;
     }
 
-    /// Runs selection and activation again; this is what /orchard reload
-    /// calls. Settings are refreshed along the way. The template
-    /// cache is dropped first: once the new definitions are published the old
-    /// pack's files must not be placeable anymore, even briefly.
+    /// Reloads settings and reactivates the selected pack for /orchard reload.
     public static Pack reload() {
         if (orchardDirectory == null) return activePack;
         settings = OrchardSettings.load(orchardDirectory);
@@ -82,8 +72,7 @@ public final class PackManager {
         return activePack;
     }
 
-    /// Late check of the pack's dynamic references, now that the registries
-    /// finally exist. Missing identifiers only ever warn.
+    /// Validates the active pack's dynamic references once server registries exist.
     public static void onServerStarted(ServerLevel level) {
         HolderLookup.Provider registries = level.registryAccess();
         FeatureIndex.rebuild(registries, level);
@@ -103,8 +92,7 @@ public final class PackManager {
         return activePack;
     }
 
-    /// Everything found in the packs folder: loadable packs plus, separately,
-    /// the folders that failed with their error so commands can show them.
+    /// Loadable packs plus failed folders found in the packs directory.
     public record PackScan(List<Pack> valid, Map<String, String> failed) {}
 
     public static PackScan scanPacks() {
@@ -181,8 +169,7 @@ public final class PackManager {
         return Pack.vanilla();
     }
 
-    /// Sorted by name on purpose - pack selection must not depend on
-    /// filesystem order.
+    /// Lists pack directories sorted by name for deterministic selection order.
     private static List<Path> listPackDirectories() {
         Path packsDir = orchardDirectory.resolve("packs");
         if (!Files.isDirectory(packsDir)) return List.of();

@@ -16,23 +16,13 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 
-/// A tree template flattened ahead of time: resolved palette plus pre-rotated
-/// block offsets for all four rotations. Placing is then just a tight loop over
-/// flat data - no NBT parsing, no settings objects, no processor callbacks.
-///
-/// The data comes straight out of the structure file's NBT rather than going
-/// through StructureTemplate: its filter API lost the "null filter means all
-/// blocks" behaviour (a null now filters everything out), which silently
-/// produced empty templates. Parsing ourselves keeps the exact semantics the
-/// mod depends on and works identically on every loader.
+/// Pre-flattened tree template with resolved palette and pre-rotated offsets for fast placement.
 public final class CompactTemplate {
 
-    /// One block of the template: offset from the origin plus its palette index.
+    /// Single template block: offset from origin plus palette index.
     record BlockEntry(int dx, int dy, int dz, int paletteIndex) {}
 
-    /// One palette layer: its resolved states plus pre-rotated offset lists.
-    /// Structure files can carry several layers as random variants - vanilla
-    /// picks one whole layer per placement, never mixing them.
+    /// One palette layer with resolved states and pre-rotated offset lists.
     static final class Layer {
 
         final BlockState[] palette;
@@ -52,9 +42,7 @@ public final class CompactTemplate {
         this.layers = layers;
     }
 
-    /// Reads a saved structure file. Mirrors StructureTemplate.load(): "size"
-    /// gives the dimensions, "palette"/"palettes" the state layers, "blocks"
-    /// the positioned entries referencing those states by index.
+    /// Reads a saved structure file into palette layers and positioned blocks.
     static CompactTemplate fromNbt(CompoundTag root, HolderGetter<Block> blockRegistry) {
         ListTag sizeTag = root.getListOrEmpty("size");
         Vec3i size = new Vec3i(
@@ -80,10 +68,7 @@ public final class CompactTemplate {
         return new CompactTemplate(size, parsed.toArray(new Layer[0]));
     }
 
-    /// Rotates a template-space position around the template's center and
-    /// returns its offset relative to the placement origin, which sits at the
-    /// footprint center. A quarter turn swaps the footprint extents: X takes
-    /// sizeZ's span and vice versa.
+    /// Rotates a template-space position into an offset relative to the footprint-center origin.
     private static int[] rotatedOffset(int x, int z, int sizeX, int sizeZ, Rotation rotation) {
         return switch (rotation) {
             case NONE                -> new int[]{ x - sizeX / 2,
@@ -97,8 +82,7 @@ public final class CompactTemplate {
         };
     }
 
-    /// Resolves one palette layer against the shared block list and writes the
-    /// four pre-rotated offset lists for it.
+    /// Resolves one palette layer and builds its four pre-rotated offset lists.
     private static Layer parseLayer(ListTag paletteTag, ListTag blocksTag,
                                     HolderGetter<Block> blockRegistry, Vec3i size) {
         BlockState[] palette = new BlockState[paletteTag.size()];
@@ -146,8 +130,7 @@ public final class CompactTemplate {
         return new Layer(palette, trimmed);
     }
 
-    /// Counts non-air blocks in a raw structure tag - used where a template
-    /// object isn't needed and only the number matters (/orchard create).
+    /// Counts non-air blocks in a raw structure tag without building a template.
     public static int countNonAirBlocks(CompoundTag root, HolderGetter<Block> blockRegistry) {
         // All layers reference the same positions, so the first decides the count.
         ListTag paletteTag = root.getList("palettes")
@@ -171,9 +154,7 @@ public final class CompactTemplate {
         return count;
     }
 
-    /// Places the template at origin with a random palette layer and rotation.
-    /// This is the worldgen hot path: two RNG calls, tight loop, terrain
-    /// preservation inlined below.
+    /// Places the template at origin with random layer and rotation, preserving terrain.
     static void place(CompactTemplate template, ServerLevelAccessor level,
                       BlockPos origin, RandomSource random, int originYOffset) {
         Layer layer = template.layers[random.nextInt(template.layers.length)];

@@ -23,8 +23,7 @@ public final class StatusCommands {
 
     private StatusCommands() {}
 
-    /// Full dump of the current state: active pack, every registered definition
-    /// with its settings, and whether each NBT file actually exists on disk.
+    /// Dumps active pack, definitions, settings, and NBT file existence.
     static int runStatus(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         List<OrchardDefinition> defs = OrchardRegistry.getAll();

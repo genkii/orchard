@@ -5,12 +5,10 @@ import java.util.Set;
 import de.minehackers.orchard.Constants;
 import de.minehackers.orchard.config.YamlValues;
 
-/// The bits we care about in a pack.yaml: name, format, version, description.
-/// Format is what decides whether this build of Orchard can load the pack;
-/// version is just the pack author's own tag and we don't act on it.
+/// Metadata from pack.yaml: name, format, version and description.
 public final class PackMetadata {
 
-    /// The only pack format this build fully understands.
+    /// Pack format version supported by this build.
     public static final String SUPPORTED_FORMAT = "0.1";
 
     private static final Set<String> KNOWN_KEYS = Set.of("name", "format", "version", "description");
@@ -27,14 +25,12 @@ public final class PackMetadata {
         this.description = description;
     }
 
-    /// Stand-in metadata for the built-in default config. That one isn't a
-    /// real pack - there is no pack.yaml on disk for it.
+    /// Stand-in metadata for the built-in defaults without a pack.yaml on disk.
     public static PackMetadata bundled() {
         return new PackMetadata("bundled", SUPPORTED_FORMAT, "", "Built-in default trees");
     }
 
-    /// Parses and validates metadata from an already-decoded YAML map.
-    /// Malformed content or an unsupported format turns into a PackLoadException.
+    /// Parses metadata from a decoded YAML map, rejecting malformed or unsupported content.
     public static PackMetadata parse(Map<?, ?> map, String directoryName) {
         for (Object key : map.keySet()) {
             if (!KNOWN_KEYS.contains(String.valueOf(key))) {
@@ -64,9 +60,7 @@ public final class PackMetadata {
         return new PackMetadata(name, format, version, description);
     }
 
-    /// Tidies up whatever YAML gave us for the format value (numbers, quoted
-    /// strings, stray whitespace) into a clean dotted form. Unparseable junk
-    /// becomes a PackLoadException.
+    /// Normalizes a raw pack.yaml format value into clean dotted numeric form.
     static String normalizeFormat(String raw) {
         String trimmed = raw.trim();
         try {
@@ -82,7 +76,7 @@ public final class PackMetadata {
         }
     }
 
-    /// True when this pack's format is one this build can load.
+    /// Returns true when this pack format can be loaded by this build.
     public boolean isFormatSupported() {
         String[] packParts = format.split("\\.");
         String[] supportedParts = SUPPORTED_FORMAT.split("\\.");

@@ -6,11 +6,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
-/// Identifiers a pack points at that live in dynamic registries - biomes,
-/// dimensions, features. None of these can be checked at load
-/// time, so validation happens once the server's registries exist. Unknown
-/// ids only warn instead of failing the pack, which is what makes it safe
-/// to reference optional modded content.
+/// Dynamic registry identifiers referenced by a pack, validated after server registries exist.
 public final class DynamicReferences {
 
     public static final DynamicReferences EMPTY =
@@ -28,7 +24,7 @@ public final class DynamicReferences {
         this.features = features;
     }
 
-    /// Mutable collector the parsers fill in while compiling a pack.
+    /// Mutable collector for dynamic references filled in while compiling a pack.
     public static final class Builder {
 
         private final Set<Identifier> biomes = new HashSet<>();

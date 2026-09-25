@@ -5,10 +5,7 @@ import java.util.List;
 import java.util.Map;
 import de.minehackers.orchard.pack.PackLoadException;
 
-/// Helpers for pulling typed values out of a decoded YAML document. SnakeYAML's
-/// SafeConstructor only ever hands us plain Maps, Lists, Strings, Numbers and
-/// Booleans; these helpers convert those with error messages precise enough
-/// that pack authors can fix their files instead of decoding stack traces.
+/// Helpers for pulling typed values out of a decoded YAML document.
 public final class YamlValues {
 
     private YamlValues() {}

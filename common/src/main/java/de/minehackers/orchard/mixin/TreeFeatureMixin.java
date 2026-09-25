@@ -19,11 +19,7 @@ import de.minehackers.orchard.NbtTreePlacer;
 import de.minehackers.orchard.OrchardDefinition;
 import de.minehackers.orchard.OrchardRegistry;
 
-/// Replaces vanilla trees with our NBT structures. We hook place() at HEAD so
-/// we get a say before vanilla does any work: when a pack definition claims
-/// this tree feature, NbtTreePlacer.interceptTree cancels the original
-/// placement and builds our structure instead. Otherwise vanilla runs as if
-/// we weren't here.
+/// Replaces vanilla trees with NBT structures via HEAD hook on place().
 @Mixin(TreeFeature.class)
 public class TreeFeatureMixin {
 

@@ -5,17 +5,14 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import de.minehackers.orchard.pack.Pack;
 import de.minehackers.orchard.pack.PackManager;
 
-/// Loader-agnostic startup - each loader just calls init() with its config
-/// directory. The flow: read orchard.yaml, scan packs/ (bundled/ as fallback),
-/// activate one pack, done. Everything is parsed and validated once during
-/// pack loading; world generation never repeats any of that work.
+/// Loader-agnostic startup: reads config, scans packs, and activates one pack.
 public final class OrchardCommon {
 
     private static Path configDirectory;
 
     private OrchardCommon() {}
 
-    /// One-time startup: wire up directories and bring a pack online.
+    /// One-time startup: wires up directories and brings a pack online.
     public static void init(Path configDir) {
         configDirectory = configDir.toAbsolutePath();
 
@@ -37,8 +34,7 @@ public final class OrchardCommon {
         Constants.LOG.info("[Orchard] ========================================");
     }
 
-    /// Runs once the server is fully up: pre-warms the NBT cache and lets the
-    /// active pack validate its registry references.
+    /// Post-server startup: pre-warms the NBT cache and validates pack references.
     public static void onServerStarted(ServerLevelAccessor level) {
         Constants.LOG.info("[Orchard] Server fully started - pre-warming NBT cache...");
         NbtTreePlacer.preWarmAll(level, getNbtDirectory());

@@ -18,24 +18,15 @@ import net.minecraft.world.level.levelgen.feature.HugeFungusFeature;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import org.jetbrains.annotations.Nullable;
 
-/// Maps feature ids (minecraft:oak etc.) to runtime feature instances.
-/// The wrinkle: Minecraft never passes the feature id to TreeFeature.place(),
-/// only the feature object itself - and since the feature fully determines
-/// placement behaviour, we fingerprint features and reverse-map them against
-/// the feature registry. Packs can therefore override any vanilla
-/// or modded tree/fungus/mushroom by id, and ids from mods that aren't
-/// installed simply never match. Built once at server start and memoized per
-/// instance, so the worldgen hot path performs exactly one hash lookup.
+/// Maps feature IDs to runtime instances via fingerprints for pack overrides.
 public final class FeatureIndex {
 
     private FeatureIndex() {}
 
-    /// Features sharing a fingerprint behave identically, so we treat them as
-    /// interchangeable.
+    /// Fingerprint for identical-behavior features treated as interchangeable.
     private record Fingerprint(List<String> parts) {}
 
-    /// Identity-based memo key - features are compared by instance, so we
-    /// can't use them as map keys directly.
+    /// Identity-based memo key comparing features by instance.
     private record IdentityKey(Object feature) {
         @Override
         public boolean equals(Object obj) {
@@ -48,8 +39,7 @@ public final class FeatureIndex {
         }
     }
 
-    /// Throwaway RandomSource for fingerprinting configs. ThreadLocal because
-    /// worldgen runs on worker threads and RandomSource is not thread-safe.
+    /// Throwaway thread-local RandomSource for fingerprinting configs.
     private static final ThreadLocal<RandomSource> FIXED_RANDOM =
             ThreadLocal.withInitial(() -> RandomSource.create(0L));
     private static final BlockPos ZERO_POS = BlockPos.ZERO;
@@ -60,8 +50,7 @@ public final class FeatureIndex {
 
     private static volatile Map<Fingerprint, List<Identifier>> index = Map.of();
 
-    /// Rebuilds the index from current registry data. Safe to re-run: readers
-    /// see either the old snapshot or the new one, never something half-built.
+    /// Rebuilds the index from registry data, safe to re-run.
     public static void rebuild(net.minecraft.core.HolderLookup.Provider registries,
                                WorldGenLevel level) {
         // Feature instances are recreated every server session, so stale memo
@@ -93,8 +82,7 @@ public final class FeatureIndex {
         index = frozen;
     }
 
-    /// True if the feature belongs to the feature entry with that id.
-    /// Features we've never seen never match.
+    /// Returns true if the feature instance belongs to the given feature ID.
     public static boolean matches(Object feature, WorldGenLevel level, Identifier featureId) {
         Fingerprint fingerprint = fingerprintOf(feature, level);
         List<Identifier> ids = index.get(fingerprint);

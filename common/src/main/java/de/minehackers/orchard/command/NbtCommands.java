@@ -16,8 +16,7 @@ public final class NbtCommands {
 
     private NbtCommands() {}
 
-    /// Shows the file size, plus the parsed dimensions when run by a player
-    /// (parsing needs a server level for block registry access).
+    /// Shows file size and parsed dimensions when run by a player.
     static int runNbtInfo(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack src = ctx.getSource();
         String name = StringArgumentType.getString(ctx, "name");

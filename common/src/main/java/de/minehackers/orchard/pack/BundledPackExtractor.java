@@ -9,12 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import de.minehackers.orchard.Constants;
 
-/// Copies the built-in default config from the JAR into
-/// config/orchard/bundled/ on first run. Resources live under
-/// default-config/ and are enumerated via a manifest because classloaders
-/// can't list directories. If the target dir exists we skip entirely -
-/// deliberate, so users can delete defaults they don't want - and that
-/// also means an interrupted extraction is never resumed.
+/// Copies bundled default config from the JAR into config/orchard/bundled/ on first run.
 public final class BundledPackExtractor {
 
     private static final String MANIFEST_PATH = "default-config/manifest.txt";
@@ -22,14 +17,12 @@ public final class BundledPackExtractor {
 
     private BundledPackExtractor() {}
 
-    /// Whether this JAR ships the bundled defaults at all (-TINY builds don't).
+    /// Returns true when this JAR ships bundled defaults (non-TINY builds).
     public static boolean isAvailable() {
         return BundledPackExtractor.class.getClassLoader().getResource(MANIFEST_PATH) != null;
     }
 
-    /// Extracts the defaults unless bundled/ already exists. Returns the
-    /// target path, which may simply not exist for -TINY builds - callers
-    /// must cope with that.
+    /// Extracts bundled defaults unless the target directory already exists.
     public static Path extractIfMissing(Path orchardDir) {
         Path target = orchardDir.resolve("bundled");
         if (Files.isDirectory(target)) {
