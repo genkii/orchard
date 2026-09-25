@@ -8,9 +8,9 @@ import net.minecraft.core.Holder;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.levelgen.feature.HugeFungusConfiguration;
-import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
-import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
+import net.minecraft.world.level.levelgen.feature.AbstractHugeMushroomFeature;
+import net.minecraft.world.level.levelgen.feature.HugeFungusFeature;
+import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import org.jspecify.annotations.Nullable;
 
 /// Global registry of orchard definitions, safe to hit from multiple threads.
@@ -89,7 +89,7 @@ public final class OrchardRegistry {
 
     @Nullable
     public static OrchardDefinition pickByWorldGen(
-            TreeConfiguration config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
+            TreeFeature config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
         List<OrchardDefinition> snapshot = treeDefs;
         List<OrchardDefinition> pool = POOL.get();
         pool.clear();
@@ -103,7 +103,7 @@ public final class OrchardRegistry {
 
     @Nullable
     public static OrchardDefinition pickByFungusWorldGen(
-            HugeFungusConfiguration config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
+            HugeFungusFeature config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
         List<OrchardDefinition> snapshot = fungusDefs;
         List<OrchardDefinition> pool = POOL.get();
         pool.clear();
@@ -117,7 +117,7 @@ public final class OrchardRegistry {
 
     @Nullable
     public static OrchardDefinition pickByMushroomWorldGen(
-            HugeMushroomFeatureConfiguration config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
+            AbstractHugeMushroomFeature config, WorldGenLevel level, Holder<Biome> biome, RandomSource random) {
         List<OrchardDefinition> snapshot = mushroomDefs;
         List<OrchardDefinition> pool = POOL.get();
         pool.clear();

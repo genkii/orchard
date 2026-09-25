@@ -9,7 +9,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
+import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import net.minecraft.world.level.levelgen.feature.trunkplacers.DarkOakTrunkPlacer;
 import net.minecraft.world.level.levelgen.feature.trunkplacers.ForkingTrunkPlacer;
 import net.minecraft.world.level.levelgen.feature.trunkplacers.GiantTrunkPlacer;
@@ -22,7 +22,7 @@ import de.minehackers.orchard.pack.DynamicReferences;
 import de.minehackers.orchard.pack.PackLoadException;
 
 /// Compiles tree_type selectors into tree-matching predicates. Accepts a
-/// shorthand name (oak, birch, ...), a configured-feature id for vanilla or
+/// shorthand name (oak, birch, ...), a feature id for vanilla or
 /// modded trees (minecraft:fancy_oak, some-mod:some_tree), a filter mapping
 /// (foliage/trunk/trunk_block), or a list mixing any of those - a list matches
 /// if any entry matches. Feature ids land in the DynamicReferences collector so
@@ -31,7 +31,7 @@ final class TreeTypeParser {
 
     private TreeTypeParser() {}
 
-    static BiPredicate<TreeConfiguration, WorldGenLevel> parse(
+    static BiPredicate<TreeFeature, WorldGenLevel> parse(
             Object node, @Nullable DynamicReferences.Builder refs, String where) {
         if (node instanceof String s) {
             return resolveName(s.trim(), refs, where);
@@ -40,7 +40,7 @@ final class TreeTypeParser {
             return parseObject(map, where);
         }
         if (node instanceof List<?> list) {
-            List<BiPredicate<TreeConfiguration, WorldGenLevel>> matchers = new ArrayList<>(list.size());
+            List<BiPredicate<TreeFeature, WorldGenLevel>> matchers = new ArrayList<>(list.size());
             for (int i = 0; i < list.size(); i++) {
                 Object element = list.get(i);
                 if (element == null) continue;
@@ -55,8 +55,8 @@ final class TreeTypeParser {
         throw new PackLoadException(where + ": tree_type must be text, a mapping, or a list");
     }
 
-    private static BiPredicate<TreeConfiguration, WorldGenLevel> parseObject(Map<?, ?> map, String where) {
-        BiPredicate<TreeConfiguration, WorldGenLevel> result = null;
+    private static BiPredicate<TreeFeature, WorldGenLevel> parseObject(Map<?, ?> map, String where) {
+        BiPredicate<TreeFeature, WorldGenLevel> result = null;
 
         for (Object keyObj : map.keySet()) {
             String key = String.valueOf(keyObj);
@@ -87,15 +87,15 @@ final class TreeTypeParser {
     }
 
     /// A shorthand alias maps to its built-in matcher; anything namespaced is
-    /// treated as a configured-feature id.
-    static BiPredicate<TreeConfiguration, WorldGenLevel> resolveName(
+    /// treated as a feature id.
+    static BiPredicate<TreeFeature, WorldGenLevel> resolveName(
             String name, @Nullable DynamicReferences.Builder refs, String where) {
         if (name.indexOf(':') >= 0) {
             Identifier id = parseIdentifier(name, where);
             if (refs != null) refs.addFeature(id);
             return (config, level) -> FeatureIndex.matches(config, level, id);
         }
-        BiPredicate<TreeConfiguration, WorldGenLevel> matcher = switch (name) {
+        BiPredicate<TreeFeature, WorldGenLevel> matcher = switch (name) {
             case "oak" -> TreeMatchers.OAK;
             case "fancy_oak" -> TreeMatchers.FANCY_OAK;
             case "birch" -> TreeMatchers.BIRCH;
@@ -124,8 +124,8 @@ final class TreeTypeParser {
         return matcher;
     }
 
-    static BiPredicate<TreeConfiguration, WorldGenLevel> resolveFoliage(String name, String where) {
-        BiPredicate<TreeConfiguration, WorldGenLevel> matcher = switch (name) {
+    static BiPredicate<TreeFeature, WorldGenLevel> resolveFoliage(String name, String where) {
+        BiPredicate<TreeFeature, WorldGenLevel> matcher = switch (name) {
             case "blob" -> TreeMatchers.byFoliage(
                     net.minecraft.world.level.levelgen.feature.foliageplacers.BlobFoliagePlacer.class);
             case "fancy" -> TreeMatchers.byFoliage(
@@ -156,8 +156,8 @@ final class TreeTypeParser {
         return matcher;
     }
 
-    static BiPredicate<TreeConfiguration, WorldGenLevel> resolveTrunk(String name, String where) {
-        BiPredicate<TreeConfiguration, WorldGenLevel> matcher = switch (name) {
+    static BiPredicate<TreeFeature, WorldGenLevel> resolveTrunk(String name, String where) {
+        BiPredicate<TreeFeature, WorldGenLevel> matcher = switch (name) {
             case "dark_oak" -> TreeMatchers.byTrunk(DarkOakTrunkPlacer.class);
             case "forking" -> TreeMatchers.byTrunk(ForkingTrunkPlacer.class);
             case "giant" -> TreeMatchers.byTrunk(GiantTrunkPlacer.class);
@@ -172,7 +172,7 @@ final class TreeTypeParser {
     }
 
     /// Looks the block up in the registry right away, then matches on it.
-    static BiPredicate<TreeConfiguration, WorldGenLevel> resolveBlock(String id, String where) {
+    static BiPredicate<TreeFeature, WorldGenLevel> resolveBlock(String id, String where) {
         Block block = resolveBlockNow(id, where);
         return TreeMatchers.byTrunkBlock(block);
     }
@@ -197,16 +197,16 @@ final class TreeTypeParser {
         }
     }
 
-    private static BiPredicate<TreeConfiguration, WorldGenLevel> combine(
-            @Nullable BiPredicate<TreeConfiguration, WorldGenLevel> a,
-            BiPredicate<TreeConfiguration, WorldGenLevel> b) {
+    private static BiPredicate<TreeFeature, WorldGenLevel> combine(
+            @Nullable BiPredicate<TreeFeature, WorldGenLevel> a,
+            BiPredicate<TreeFeature, WorldGenLevel> b) {
         return a == null ? b : a.and(b);
     }
 
-    private static BiPredicate<TreeConfiguration, WorldGenLevel> or(
-            List<BiPredicate<TreeConfiguration, WorldGenLevel>> matchers) {
+    private static BiPredicate<TreeFeature, WorldGenLevel> or(
+            List<BiPredicate<TreeFeature, WorldGenLevel>> matchers) {
         return (config, level) -> {
-            for (BiPredicate<TreeConfiguration, WorldGenLevel> m : matchers) {
+            for (BiPredicate<TreeFeature, WorldGenLevel> m : matchers) {
                 if (m.test(config, level)) return true;
             }
             return false;

@@ -24,7 +24,6 @@ import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /// Swaps vanilla trees for NBT structure templates. Each file is read once,
@@ -303,8 +302,12 @@ public final class NbtTreePlacer {
     private static boolean isObstructingBlock(BlockState state) {
         if (state.isAir()) return false;
         if (state.canBeReplaced()) return false;
-        if (state.is(BlockTags.NETHER_CARVER_REPLACEABLES)) return false;
-        if (state.is(BlockTags.OVERWORLD_CARVER_REPLACEABLES)) return false;
+        // 26.3 removed the carver-replaceable tags (carvers are data-driven
+        // now), so natural terrain is approximated with the surviving base tags.
+        if (state.is(BlockTags.BASE_STONE_OVERWORLD)) return false;
+        if (state.is(BlockTags.BASE_STONE_NETHER)) return false;
+        if (state.is(BlockTags.SAND)) return false;
+        if (state.is(BlockTags.MUD)) return false;
         if (state.is(BlockTags.NYLIUM)) return false;
         if (state.is(BlockTags.DIRT)) return false;
         if (state.is(BlockTags.LEAVES)) return false;
@@ -344,7 +347,7 @@ public final class NbtTreePlacer {
     /// checks, stamp down our template instead, and tell vanilla not to bother.
     /// If anything fails a check we just return and vanilla proceeds normally.
     public static void tryIntercept(
-            FeaturePlaceContext<?> context,
+            RandomSource random,
             CallbackInfoReturnable<Boolean> cir,
             OrchardDefinition def,
             WorldGenLevel level,
@@ -409,37 +412,37 @@ public final class NbtTreePlacer {
 
         Constants.LOG.debug("[Orchard] Placing {} at {}", def.getNbtFileName(), origin);
 
-        CompactTemplate.place(template, level, origin, context.random(), def.getOriginYOffset());
+        CompactTemplate.place(template, level, origin, random, def.getOriginYOffset());
         markPlaced(spacingKey, origin);
 
         cir.setReturnValue(true);
     }
 
     public static void interceptTree(
-            FeaturePlaceContext<?> context,
+            RandomSource random,
             CallbackInfoReturnable<Boolean> cir,
             OrchardDefinition def,
             WorldGenLevel level,
             BlockPos origin) {
-        tryIntercept(context, cir, def, level, origin, true);
+        tryIntercept(random, cir, def, level, origin, true);
     }
 
     public static void interceptFungus(
-            FeaturePlaceContext<?> context,
+            RandomSource random,
             CallbackInfoReturnable<Boolean> cir,
             OrchardDefinition def,
             WorldGenLevel level,
             BlockPos origin) {
-        tryIntercept(context, cir, def, level, origin, false);
+        tryIntercept(random, cir, def, level, origin, false);
     }
 
     public static void interceptMushroom(
-            FeaturePlaceContext<?> context,
+            RandomSource random,
             CallbackInfoReturnable<Boolean> cir,
             OrchardDefinition def,
             WorldGenLevel level,
             BlockPos origin) {
-        tryIntercept(context, cir, def, level, origin, false);
+        tryIntercept(random, cir, def, level, origin, false);
     }
 
     public static double getMaxObstructedFraction() {

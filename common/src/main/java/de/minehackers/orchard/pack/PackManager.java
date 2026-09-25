@@ -5,11 +5,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.ServiceLoader;
-import java.util.TreeMap;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.core.HolderLookup;
@@ -34,14 +32,13 @@ public final class PackManager {
     // threads may read them at any moment.
     private static volatile OrchardSettings settings = OrchardSettings.withDefaults();
     private static volatile Pack activePack = Pack.vanilla();
-    private static volatile Map<String, PackDataHandler> dataHandlers = Map.of();
     private static volatile Path orchardDirectory;
     private static volatile String bootError;
 
     private PackManager() {}
 
-    /// Startup: create the folder layout, pick up data-handler addons, read
-    /// orchard.yaml, extract the defaults, then choose and activate a pack.
+    /// Startup: create the folder layout, read orchard.yaml, extract the
+    /// defaults, then choose and activate a pack.
     public static void boot(Path configDir) {
         Path orchardDir = configDir.resolve("orchard");
         ensureDirectory(orchardDir);
@@ -49,7 +46,6 @@ public final class PackManager {
         ensureDirectory(orchardDir.resolve("generated"));
         orchardDirectory = orchardDir.toAbsolutePath();
 
-        discoverDataHandlers();
         settings = OrchardSettings.load(orchardDir);
         OrchardRegistry.setRarePoolProbability(settings.rarePoolProbability());
         NbtTreePlacer.setMaxObstructedFraction(settings.maxObstructedFraction());
@@ -72,12 +68,11 @@ public final class PackManager {
     }
 
     /// Runs selection and activation again; this is what /orchard reload
-    /// calls. Settings and handlers are refreshed along the way. The template
+    /// calls. Settings are refreshed along the way. The template
     /// cache is dropped first: once the new definitions are published the old
     /// pack's files must not be placeable anymore, even briefly.
     public static Pack reload() {
         if (orchardDirectory == null) return activePack;
-        discoverDataHandlers();
         settings = OrchardSettings.load(orchardDirectory);
         OrchardRegistry.setRarePoolProbability(settings.rarePoolProbability());
         NbtTreePlacer.setMaxObstructedFraction(settings.maxObstructedFraction());
@@ -115,7 +110,7 @@ public final class PackManager {
     public static PackScan scanPacks() {
         List<Path> dirs = listPackDirectories();
         List<Pack> packs = new ArrayList<>(dirs.size());
-        Map<String, String> failed = new TreeMap<>();
+        Map<String, String> failed = new LinkedHashMap<>();
         for (Path dir : dirs) {
             PackLoader.Result result = PackLoader.load(dir, PackSource.PACKS);
             if (result.success()) {
@@ -126,49 +121,6 @@ public final class PackManager {
             }
         }
         return new PackScan(List.copyOf(packs), Map.copyOf(failed));
-    }
-
-    /// Re-scans for PackDataHandler addons on every boot and reload, so an
-    /// addon installed between sessions (or mid-session, after a reload)
-    /// gets picked up. If two handlers claim the same extension, whoever
-    /// registered first wins and the clash is only warned about.
-    public static void discoverDataHandlers() {
-        Map<String, PackDataHandler> found = new TreeMap<>();
-        try {
-            ServiceLoader<PackDataHandler> loader = ServiceLoader.load(
-                    PackDataHandler.class, PackManager.class.getClassLoader());
-            for (PackDataHandler handler : loader) {
-                for (String rawExtension : handler.supportedExtensions()) {
-                    if (rawExtension == null || rawExtension.isBlank()) continue;
-                    String extension = rawExtension.trim().toLowerCase(java.util.Locale.ROOT);
-                    PackDataHandler previous = found.putIfAbsent(extension, handler);
-                    if (previous != null && previous != handler) {
-                        Constants.LOG.warn("[Orchard] Both {} and {} claim '.{}' files - keeping {}",
-                                previous.getClass().getName(), handler.getClass().getName(),
-                                extension, previous.getClass().getName());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            Constants.LOG.error("[Orchard] Failed to load pack data handlers: {}", e.getMessage(), e);
-        }
-        dataHandlers = Map.copyOf(found);
-        if (!found.isEmpty()) {
-            Constants.LOG.info("[Orchard] Registered pack data handler(s) for extension(s): {}",
-                    found.keySet());
-        }
-    }
-
-    static Optional<PackDataHandler> handlerFor(Path file) {
-        String name = file.getFileName().toString();
-        int dot = name.lastIndexOf('.');
-        if (dot < 0) return Optional.empty();
-        return Optional.ofNullable(dataHandlers.get(name.substring(dot + 1).toLowerCase(java.util.Locale.ROOT)));
-    }
-
-    /// Every registered data-file extension, lowercase, without the dot.
-    public static java.util.Set<String> registeredDataExtensions() {
-        return dataHandlers.keySet();
     }
 
     private static void selectAndActivate(String phase) {
@@ -276,9 +228,9 @@ public final class PackManager {
             }
         }
 
-        var featureRegistry = registries.lookupOrThrow(Registries.CONFIGURED_FEATURE);
+        var featureRegistry = registries.lookupOrThrow(Registries.FEATURE);
         for (Identifier id : pack.references().features()) {
-            if (!featureRegistry.get(ResourceKey.create(Registries.CONFIGURED_FEATURE, id)).isPresent()) {
+            if (!featureRegistry.get(ResourceKey.create(Registries.FEATURE, id)).isPresent()) {
                 Constants.LOG.warn(
                         "[Orchard] Pack '{}': feature '{}' is not present in this instance "
                         + "(is its mod missing?) - matching rules will simply never match",

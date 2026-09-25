@@ -3,13 +3,13 @@ package de.minehackers.orchard.mixin;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.feature.AbstractHugeMushroomFeature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -29,12 +29,10 @@ public class HugeMushroomFeatureMixin {
 
     @Inject(method = "place", at = @At("HEAD"), cancellable = true)
     private void onPlace(
-            FeaturePlaceContext<HugeMushroomFeatureConfiguration> context,
+            WorldGenLevel level, ChunkGenerator generator, RandomSource random, BlockPos origin,
             CallbackInfoReturnable<Boolean> cir) {
 
-        HugeMushroomFeatureConfiguration config = context.config();
-        WorldGenLevel level = context.level();
-        BlockPos origin = context.origin();
+        AbstractHugeMushroomFeature config = (AbstractHugeMushroomFeature) (Object) this;
 
         NbtTreePlacer.logFirstInterception(NbtTreePlacer.MUSHROOM_FIRED_ONCE,
                 "[Orchard] HugeMushroomFeatureMixin active - origin=" + origin);
@@ -50,7 +48,7 @@ public class HugeMushroomFeatureMixin {
             Holder<Biome> biome = level.getBiome(origin);
 
             OrchardDefinition def =
-                    OrchardRegistry.pickByMushroomWorldGen(config, level, biome, context.random());
+                    OrchardRegistry.pickByMushroomWorldGen(config, level, biome, random);
             if (def == null) return;
 
             BlockState groundState = level.getBlockState(origin.below());
@@ -64,7 +62,7 @@ public class HugeMushroomFeatureMixin {
                 return;
             }
 
-            NbtTreePlacer.interceptMushroom(context, cir, def, level, origin);
+            NbtTreePlacer.interceptMushroom(random, cir, def, level, origin);
         } catch (Exception e) {
             Constants.LOG.error("[Orchard] Mushroom interception failed at {} - falling back to vanilla",
                     origin, e);

@@ -7,7 +7,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
 /// Identifiers a pack points at that live in dynamic registries - biomes,
-/// dimensions, configured features. None of these can be checked at load
+/// dimensions, features. None of these can be checked at load
 /// time, so validation happens once the server's registries exist. Unknown
 /// ids only warn instead of failing the pack, which is what makes it safe
 /// to reference optional modded content.

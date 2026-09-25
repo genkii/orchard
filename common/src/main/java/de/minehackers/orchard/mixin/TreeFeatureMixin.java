@@ -3,13 +3,13 @@ package de.minehackers.orchard.mixin;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
-import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -21,7 +21,7 @@ import de.minehackers.orchard.OrchardRegistry;
 
 /// Replaces vanilla trees with our NBT structures. We hook place() at HEAD so
 /// we get a say before vanilla does any work: when a pack definition claims
-/// this tree config, NbtTreePlacer.interceptTree cancels the original
+/// this tree feature, NbtTreePlacer.interceptTree cancels the original
 /// placement and builds our structure instead. Otherwise vanilla runs as if
 /// we weren't here.
 @Mixin(TreeFeature.class)
@@ -29,12 +29,10 @@ public class TreeFeatureMixin {
 
     @Inject(method = "place", at = @At("HEAD"), cancellable = true)
     private void onPlace(
-            FeaturePlaceContext<TreeConfiguration> context,
+            WorldGenLevel level, ChunkGenerator generator, RandomSource random, BlockPos origin,
             CallbackInfoReturnable<Boolean> cir) {
 
-        TreeConfiguration config = context.config();
-        WorldGenLevel level = context.level();
-        BlockPos origin = context.origin();
+        TreeFeature config = (TreeFeature) (Object) this;
 
         NbtTreePlacer.logFirstInterception(NbtTreePlacer.TREE_FIRED_ONCE,
                 "[Orchard] TreeFeatureMixin is active - first TreeFeature.place() intercepted.");
@@ -45,7 +43,7 @@ public class TreeFeatureMixin {
         try {
             Holder<Biome> biome = level.getBiome(origin);
             OrchardDefinition def =
-                    OrchardRegistry.pickByWorldGen(config, level, biome, context.random());
+                    OrchardRegistry.pickByWorldGen(config, level, biome, random);
             if (def == null) return;
 
             BlockState originState = level.getBlockState(origin);
@@ -58,7 +56,7 @@ public class TreeFeatureMixin {
 
             origin = NbtTreePlacer.groundAdjust(level, origin, NbtTreePlacer.getMaxGroundAdjust());
 
-            NbtTreePlacer.interceptTree(context, cir, def, level, origin);
+            NbtTreePlacer.interceptTree(random, cir, def, level, origin);
         } catch (Exception e) {
             Constants.LOG.error("[Orchard] Tree interception failed at {} - falling back to vanilla",
                     origin, e);

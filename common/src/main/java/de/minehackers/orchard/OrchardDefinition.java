@@ -11,9 +11,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.feature.HugeFungusConfiguration;
-import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
-import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
+import net.minecraft.world.level.levelgen.feature.AbstractHugeMushroomFeature;
+import net.minecraft.world.level.levelgen.feature.HugeFungusFeature;
+import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import org.jspecify.annotations.Nullable;
 
 /// Describes how one NBT structure file replaces trees, fungi or huge mushrooms,
@@ -23,9 +23,9 @@ public final class OrchardDefinition {
 
     private final String nbtFileName;
     private final Path nbtDirectory;
-    private final BiPredicate<TreeConfiguration, WorldGenLevel> worldGenMatcher;
-    private final BiPredicate<HugeFungusConfiguration, WorldGenLevel> hugeFungusWorldGenMatcher;
-    private final BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> hugeMushroomWorldGenMatcher;
+    private final BiPredicate<TreeFeature, WorldGenLevel> worldGenMatcher;
+    private final BiPredicate<HugeFungusFeature, WorldGenLevel> hugeFungusWorldGenMatcher;
+    private final BiPredicate<AbstractHugeMushroomFeature, WorldGenLevel> hugeMushroomWorldGenMatcher;
     private final Predicate<Holder<Biome>> biomeMatcher;
     private final Set<ResourceKey<Level>> dimensions;
     private final int minSpacing;
@@ -106,15 +106,15 @@ public final class OrchardDefinition {
         return hugeMushroomWorldGenMatcher != null;
     }
 
-    public boolean matchesWorldGen(TreeConfiguration config, WorldGenLevel level) {
+    public boolean matchesWorldGen(TreeFeature config, WorldGenLevel level) {
         return worldGenMatcher != null && worldGenMatcher.test(config, level);
     }
 
-    public boolean matchesFungusWorldGen(HugeFungusConfiguration config, WorldGenLevel level) {
+    public boolean matchesFungusWorldGen(HugeFungusFeature config, WorldGenLevel level) {
         return hugeFungusWorldGenMatcher != null && hugeFungusWorldGenMatcher.test(config, level);
     }
 
-    public boolean matchesMushroomWorldGen(HugeMushroomFeatureConfiguration config, WorldGenLevel level) {
+    public boolean matchesMushroomWorldGen(AbstractHugeMushroomFeature config, WorldGenLevel level) {
         return hugeMushroomWorldGenMatcher != null && hugeMushroomWorldGenMatcher.test(config, level);
     }
 
@@ -150,9 +150,9 @@ public final class OrchardDefinition {
 
         private final String nbtFileName;
         private final Path nbtDirectory;
-        private BiPredicate<TreeConfiguration, WorldGenLevel> worldGenMatcher;
-        private BiPredicate<HugeFungusConfiguration, WorldGenLevel> hugeFungusWorldGenMatcher;
-        private BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> hugeMushroomWorldGenMatcher;
+        private BiPredicate<TreeFeature, WorldGenLevel> worldGenMatcher;
+        private BiPredicate<HugeFungusFeature, WorldGenLevel> hugeFungusWorldGenMatcher;
+        private BiPredicate<AbstractHugeMushroomFeature, WorldGenLevel> hugeMushroomWorldGenMatcher;
         private Predicate<Holder<Biome>> biomeMatcher;
         private Set<ResourceKey<Level>> dimensions = Set.of();
         private int minSpacing = 0;
@@ -171,17 +171,17 @@ public final class OrchardDefinition {
             this.nbtDirectory = nbtDirectory;
         }
 
-        public Builder worldGen(BiPredicate<TreeConfiguration, WorldGenLevel> matcher) {
+        public Builder worldGen(BiPredicate<TreeFeature, WorldGenLevel> matcher) {
             this.worldGenMatcher = matcher;
             return this;
         }
 
-        public Builder fungusWorldGen(BiPredicate<HugeFungusConfiguration, WorldGenLevel> matcher) {
+        public Builder fungusWorldGen(BiPredicate<HugeFungusFeature, WorldGenLevel> matcher) {
             this.hugeFungusWorldGenMatcher = matcher;
             return this;
         }
 
-        public Builder mushroomWorldGen(BiPredicate<HugeMushroomFeatureConfiguration, WorldGenLevel> matcher) {
+        public Builder mushroomWorldGen(BiPredicate<AbstractHugeMushroomFeature, WorldGenLevel> matcher) {
             this.hugeMushroomWorldGenMatcher = matcher;
             return this;
         }

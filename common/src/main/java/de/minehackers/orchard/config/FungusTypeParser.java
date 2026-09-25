@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.function.BiPredicate;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.WorldGenLevel;
-import net.minecraft.world.level.levelgen.feature.HugeFungusConfiguration;
+import net.minecraft.world.level.levelgen.feature.HugeFungusFeature;
 import org.jetbrains.annotations.Nullable;
 import de.minehackers.orchard.matchers.FeatureIndex;
 import de.minehackers.orchard.matchers.TreeMatchers;
@@ -13,19 +13,19 @@ import de.minehackers.orchard.pack.DynamicReferences;
 import de.minehackers.orchard.pack.PackLoadException;
 
 /// Compiles fungus_type selectors into fungus-matching predicates. Accepts the
-/// shorthand names warped/crimson/any, a list of them, or any configured-feature
+/// shorthand names warped/crimson/any, a list of them, or any feature
 /// id such as some-mod:some_fungus.
 final class FungusTypeParser {
 
     private FungusTypeParser() {}
 
-    static BiPredicate<HugeFungusConfiguration, WorldGenLevel> parse(
+    static BiPredicate<HugeFungusFeature, WorldGenLevel> parse(
             Object node, @Nullable DynamicReferences.Builder refs, String where) {
         if (node instanceof String s) {
             return resolveName(s.trim(), refs, where);
         }
         if (node instanceof List<?> list) {
-            List<BiPredicate<HugeFungusConfiguration, WorldGenLevel>> matchers =
+            List<BiPredicate<HugeFungusFeature, WorldGenLevel>> matchers =
                     new ArrayList<>(list.size());
             for (int i = 0; i < list.size(); i++) {
                 Object element = list.get(i);
@@ -41,14 +41,14 @@ final class FungusTypeParser {
         throw new PackLoadException(where + ": fungus_type must be text or a list");
     }
 
-    private static BiPredicate<HugeFungusConfiguration, WorldGenLevel> resolveName(
+    private static BiPredicate<HugeFungusFeature, WorldGenLevel> resolveName(
             String name, @Nullable DynamicReferences.Builder refs, String where) {
         if (name.indexOf(':') >= 0) {
             Identifier id = TreeTypeParser.parseIdentifier(name, where);
             if (refs != null) refs.addFeature(id);
             return (config, level) -> FeatureIndex.matches(config, level, id);
         }
-        BiPredicate<HugeFungusConfiguration, WorldGenLevel> matcher = switch (name) {
+        BiPredicate<HugeFungusFeature, WorldGenLevel> matcher = switch (name) {
             case "warped" -> TreeMatchers.WARPED_FUNGUS;
             case "crimson" -> TreeMatchers.CRIMSON_FUNGUS;
             case "any" -> TreeMatchers.ANY_FUNGUS;
@@ -61,10 +61,10 @@ final class FungusTypeParser {
         return matcher;
     }
 
-    private static BiPredicate<HugeFungusConfiguration, WorldGenLevel> anyOf(
-            List<BiPredicate<HugeFungusConfiguration, WorldGenLevel>> matchers) {
+    private static BiPredicate<HugeFungusFeature, WorldGenLevel> anyOf(
+            List<BiPredicate<HugeFungusFeature, WorldGenLevel>> matchers) {
         return (config, level) -> {
-            for (BiPredicate<HugeFungusConfiguration, WorldGenLevel> m : matchers) {
+            for (BiPredicate<HugeFungusFeature, WorldGenLevel> m : matchers) {
                 if (m.test(config, level)) return true;
             }
             return false;

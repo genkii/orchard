@@ -42,7 +42,7 @@ echo ""
 mkdir -p "$OUTPUT_DIR"
 rm -f "$OUTPUT_DIR"/*.jar
 
-echo "[1/5] Copying project to temp directory..."
+echo "[1/4] Copying project to temp directory..."
 cp -r "$SRC_DIR" "$TEMP_DIR/orchard"
 
 copy_default_config() {
@@ -84,20 +84,20 @@ VERSION=$(grep '^version=' "$SCRIPT_DIR/gradle.properties" | cut -d= -f2)
 echo "  Version: $VERSION"
 
 if [ "$ONLY_TINY" = false ]; then
-    echo "[2/5] Bundling built-in defaults..."
+    echo "[2/4] Bundling built-in defaults..."
     copy_default_config "$TEMP_DIR/orchard"
     MANIFEST_COUNT=$(grep -c . "$TEMP_DIR/orchard/common/src/main/resources/default-config/manifest.txt")
     echo "  Bundled $MANIFEST_COUNT file(s) (data + nbt)"
 
-    echo "[3/5] Building full Fabric and NeoForge JARs..."
+    echo "[3/4] Building full Fabric and NeoForge JARs..."
     build "$TEMP_DIR/orchard"
     collect "$OUTPUT_DIR"
 else
-    echo "[2/5] Skipping built-in defaults (--tiny)."
-    echo "[3/5] Skipped."
+    echo "[2/4] Skipping built-in defaults (--tiny)."
+    echo "[3/4] Skipped."
 fi
 
-echo "[4/5] Building -TINY JARs (without built-in defaults)..."
+echo "[4/4] Building -TINY JARs (without built-in defaults)..."
 remove_default_config "$TEMP_DIR/orchard"
 (cd "$TEMP_DIR/orchard" && ./gradlew clean :fabric:build :neoforge:build --no-daemon -q 2>&1 | tail -5)
 
@@ -111,11 +111,6 @@ for jar in $(find "$TEMP_DIR/orchard/fabric/build/libs" "$TEMP_DIR/orchard/neofo
     fi
 done
 collect "$OUTPUT_DIR"
-
-echo "[5/5] Building Orchard: Scripting jars (optional JS addon)..."
-(cd "$TEMP_DIR/orchard" && ./gradlew :scripting:fabricJar :scripting:neoforgeJar --no-daemon -q 2>&1 | tail -5)
-find "$TEMP_DIR/orchard/scripting/build/libs" \
-    -maxdepth 1 -name '*.jar' -exec cp {} "$OUTPUT_DIR/" \;
 
 echo ""
 echo "=== Done ==="

@@ -55,10 +55,7 @@ public final class PackCommands {
         }
 
         StatusCommands.send(src, "");
-        StatusCommands.send(src, "Data formats: yaml"
-                + PackManager.registeredDataExtensions().stream()
-                        .map(e -> ", " + e + " (addon)")
-                        .collect(java.util.stream.Collectors.joining()));
+        StatusCommands.send(src, "Data formats: yaml, yml");
         StatusCommands.send(src, "Select a pack in orchard.yaml:");
         StatusCommands.send(src, "  pack:");
         StatusCommands.send(src, "    selected: auto");

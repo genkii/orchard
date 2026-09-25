@@ -20,7 +20,7 @@ import de.minehackers.orchard.pack.PackLoadException;
 /// stage of the V1 pipeline (load, parse, validate, resolve, active). Everything
 /// resolvable eagerly (blocks, matchers, predicates) is built up front so world
 /// gen never parses or does registry lookups at runtime. Identifiers living in
-/// dynamic registries (biomes, dimensions, configured features) are collected
+/// dynamic registries (biomes, dimensions, features) are collected
 /// for existence validation at server start; an unknown id only costs a
 /// warning, never the whole pack.
 public final class DefinitionCompiler {

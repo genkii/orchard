@@ -8,7 +8,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.Nullable;
 import org.yaml.snakeyaml.LoaderOptions;
@@ -139,18 +138,13 @@ final class PackLoader {
         return Result.ok(pack);
     }
 
-    /// yaml/yml files go straight to the YAML parser; everything else is
-    /// routed to whichever data handler claimed that extension.
+    /// yaml/yml files go to the YAML parser; anything else is rejected.
     private static List<RawDefinition> parseDataFile(Path file) {
         String name = file.getFileName().toString();
         if (name.endsWith(".yaml") || name.endsWith(".yml")) {
             return DataFileParser.parseFile(file);
         }
-        Optional<PackDataHandler> handler = PackManager.handlerFor(file);
-        if (handler.isEmpty()) {
-            throw new PackLoadException("no handler for extension '" + name + "'");
-        }
-        return handler.get().parse(file);
+        throw new PackLoadException("unsupported data file extension '" + name + "' (expected .yaml or .yml)");
     }
 
     private static PackMetadata readMetadata(Path packFile, String directoryName) {
@@ -183,10 +177,9 @@ final class PackLoader {
 
     private static boolean hasKnownExtension(Path file) {
         String name = file.getFileName().toString();
-        if (name.endsWith(".yaml") || name.endsWith(".yml")) return true;
         // Anything else is skipped silently - unknown extensions never reach
         // a parser and never cause an error.
-        return PackManager.handlerFor(file).isPresent();
+        return name.endsWith(".yaml") || name.endsWith(".yml");
     }
 
     private static void warnMissingNbt(PackMetadata metadata, List<OrchardDefinition> definitions, Path nbtDir) {

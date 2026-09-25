@@ -35,5 +35,4 @@ jobs:
             common/build/libs/*.jar
             fabric/build/libs/*.jar
             neoforge/build/libs/*.jar
-            scripting/build/libs/*.jar
           if-no-files-found: error

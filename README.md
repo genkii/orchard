@@ -137,29 +137,10 @@ Premade configs are available on our Discord server
 
 ## Other Versions
 
-Orchard supports both **NeoForge** and **Fabric** for Minecraft 26.2.
+Orchard supports both **NeoForge** and **Fabric** for Minecraft 26.3.
 
 * Full JARs include the built-in defaults and are the recommended download.
 * `-TINY` JARs ship without the built-in defaults (smaller download, nothing else differs).
-* **Orchard: Scripting** (optional addon) adds JavaScript support - write your
-  tree definitions in `.js` files with the full power of a real language:
-
-```js
-// packs/my-pack/data/trees.js
-define({ nbt: "oak1.nbt", tree_type: "oak", weight: 2 });
-
-for (var i = 1; i <= 5; i++) {
-    define({
-        nbt: "birch" + i + ".nbt",
-        tree_type: "birch",
-        biomes: orchard.tag("#is_forest"),
-        rare: (i === 5)
-    });
-}
-```
-
-Scripts run once when the pack loads, inside a sandbox (no Java access, 5s
-time limit), and are validated by the same pipeline as YAML files.
 
 ## Mod Recommendations
 
@@ -186,4 +167,4 @@ See [LICENSE](LICENSE) (MIT).
 
 **Releases:** pushing a git tag `v<version>` (e.g. `v0.6.0-BETA`, matching
 `gradle.properties`) runs the full bundle in CI and attaches all JARs -
-full, `-TINY` and Scripting addon - to a GitHub Release automatically.
+full and `-TINY` - to a GitHub Release automatically.

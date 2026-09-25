@@ -13,19 +13,16 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.feature.AbstractHugeMushroomFeature;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.HugeFungusFeature;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
-import net.minecraft.world.level.levelgen.feature.HugeFungusConfiguration;
-import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
-import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import org.jetbrains.annotations.Nullable;
 
-/// Maps configured-feature ids (minecraft:oak etc.) to runtime configurations.
+/// Maps feature ids (minecraft:oak etc.) to runtime feature instances.
 /// The wrinkle: Minecraft never passes the feature id to TreeFeature.place(),
-/// only the configuration object - and since the config fully determines
-/// placement behaviour, we fingerprint configs and reverse-map them against
-/// the configured-feature registry. Packs can therefore override any vanilla
+/// only the feature object itself - and since the feature fully determines
+/// placement behaviour, we fingerprint features and reverse-map them against
+/// the feature registry. Packs can therefore override any vanilla
 /// or modded tree/fungus/mushroom by id, and ids from mods that aren't
 /// installed simply never match. Built once at server start and memoized per
 /// instance, so the worldgen hot path performs exactly one hash lookup.
@@ -33,21 +30,21 @@ public final class FeatureIndex {
 
     private FeatureIndex() {}
 
-    /// Configs sharing a fingerprint behave identically, so we treat them as
+    /// Features sharing a fingerprint behave identically, so we treat them as
     /// interchangeable.
     private record Fingerprint(List<String> parts) {}
 
-    /// Identity-based memo key - config classes don't implement equals, so we
+    /// Identity-based memo key - features are compared by instance, so we
     /// can't use them as map keys directly.
-    private record IdentityKey(Object config) {
+    private record IdentityKey(Object feature) {
         @Override
         public boolean equals(Object obj) {
-            return obj instanceof IdentityKey other && other.config == config;
+            return obj instanceof IdentityKey other && other.feature == feature;
         }
 
         @Override
         public int hashCode() {
-            return System.identityHashCode(config);
+            return System.identityHashCode(feature);
         }
     }
 
@@ -67,23 +64,23 @@ public final class FeatureIndex {
     /// see either the old snapshot or the new one, never something half-built.
     public static void rebuild(net.minecraft.core.HolderLookup.Provider registries,
                                WorldGenLevel level) {
-        // Config instances are recreated every server session, so stale memo
+        // Feature instances are recreated every server session, so stale memo
         // entries would pile up forever - clear them now while nothing generates.
         MEMO.clear();
         Map<Fingerprint, List<Identifier>> rebuilt = new HashMap<>();
-        var registry = registries.lookupOrThrow(Registries.CONFIGURED_FEATURE);
+        var registry = registries.lookupOrThrow(Registries.FEATURE);
 
-        for (Holder.Reference<ConfiguredFeature<?, ?>> entry : registry.listElements().toList()) {
-            ConfiguredFeature<?, ?> feature = entry.value();
+        for (Holder.Reference<Feature> entry : registry.listElements().toList()) {
+            Feature feature = entry.value();
             Identifier id = entry.key().identifier();
 
             Fingerprint fingerprint;
-            if (feature.feature() instanceof TreeFeature) {
-                fingerprint = fingerprintOf(feature.config(), level);
-            } else if (feature.feature() instanceof HugeFungusFeature) {
-                fingerprint = fingerprintOf(feature.config(), level);
-            } else if (feature.feature() instanceof AbstractHugeMushroomFeature) {
-                fingerprint = fingerprintOf(feature.config(), level);
+            if (feature instanceof TreeFeature) {
+                fingerprint = fingerprintOf(feature, level);
+            } else if (feature instanceof HugeFungusFeature) {
+                fingerprint = fingerprintOf(feature, level);
+            } else if (feature instanceof AbstractHugeMushroomFeature) {
+                fingerprint = fingerprintOf(feature, level);
             } else {
                 continue;
             }
@@ -96,10 +93,10 @@ public final class FeatureIndex {
         index = frozen;
     }
 
-    /// True if the config belongs to the configured feature with that id.
-    /// Configs we've never seen never match.
-    public static boolean matches(Object config, WorldGenLevel level, Identifier featureId) {
-        Fingerprint fingerprint = fingerprintOf(config, level);
+    /// True if the feature belongs to the feature entry with that id.
+    /// Features we've never seen never match.
+    public static boolean matches(Object feature, WorldGenLevel level, Identifier featureId) {
+        Fingerprint fingerprint = fingerprintOf(feature, level);
         List<Identifier> ids = index.get(fingerprint);
         return ids != null && ids.contains(featureId);
     }
@@ -110,37 +107,37 @@ public final class FeatureIndex {
     }
 
     @Nullable
-    public static List<Identifier> idsFor(Object config, WorldGenLevel level) {
-        return index.get(fingerprintOf(config, level));
+    public static List<Identifier> idsFor(Object feature, WorldGenLevel level) {
+        return index.get(fingerprintOf(feature, level));
     }
 
-    private static Fingerprint fingerprintOf(Object config, WorldGenLevel level) {
+    private static Fingerprint fingerprintOf(Object feature, WorldGenLevel level) {
         return MEMO.computeIfAbsent(
-                new IdentityKey(config), key -> computeFingerprint(key.config(), level));
+                new IdentityKey(feature), key -> computeFingerprint(key.feature(), level));
     }
 
-    private static Fingerprint computeFingerprint(Object config, WorldGenLevel level) {
-        if (config instanceof TreeConfiguration tree) {
+    private static Fingerprint computeFingerprint(Object feature, WorldGenLevel level) {
+        if (feature instanceof TreeFeature tree) {
             return new Fingerprint(List.of(
                     "tree",
-                    tree.foliagePlacer.getClass().getName(),
-                    tree.trunkPlacer.getClass().getName(),
-                    sampledBlock(tree.trunkProvider, level),
-                    sampledBlock(tree.foliageProvider, level),
-                    String.valueOf(tree.ignoreVines)));
+                    tree.foliagePlacer().getClass().getName(),
+                    tree.trunkPlacer().getClass().getName(),
+                    sampledBlock(tree.trunkProvider().value(), level),
+                    sampledBlock(tree.foliageProvider().value(), level),
+                    String.valueOf(tree.ignoreVines())));
         }
-        if (config instanceof HugeFungusConfiguration fungus) {
+        if (feature instanceof HugeFungusFeature fungus) {
             return new Fingerprint(List.of(
                     "fungus",
-                    fungus.stemState.getBlock().toString(),
-                    fungus.hatState.getBlock().toString(),
-                    fungus.validBaseState.getBlock().toString()));
+                    fungus.stemState().getBlock().toString(),
+                    fungus.hatState().getBlock().toString(),
+                    fungus.validBaseState().getBlock().toString()));
         }
-        if (config instanceof HugeMushroomFeatureConfiguration mushroom) {
+        if (feature instanceof AbstractHugeMushroomFeature mushroom) {
             return new Fingerprint(List.of(
                     "mushroom",
-                    sampledBlock(mushroom.capProvider(), level),
-                    sampledBlock(mushroom.stemProvider(), level)));
+                    sampledBlock(mushroom.capProvider().value(), level),
+                    sampledBlock(mushroom.stemProvider().value(), level)));
         }
         return UNKNOWN;
     }

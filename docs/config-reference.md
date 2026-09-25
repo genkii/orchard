@@ -104,7 +104,7 @@ Unknown fields produce a warning in the log but do not stop the pack.
 
 ## tree_type
 
-Can be a simple name, a configured-feature id, an object with structural
+Can be a simple name, a feature id, an object with structural
 filters, or an array of any of these (matches if any entry matches).
 
 ### Simple Names
@@ -132,7 +132,7 @@ filters, or an array of any of these (matches if any entry matches).
 
 ### Feature Ids (vanilla + modded)
 
-Use any configured-feature identifier to target trees from vanilla **or other
+Use any feature identifier to target trees from vanilla **or other
 mods**:
 
 ```yaml
@@ -143,8 +143,8 @@ mods**:
   tree_type: some-mod:some_tree
 ```
 
-Orchard identifies which configured feature fired by comparing the feature's
-configuration against the registry at server start. Ids that do not exist are
+Orchard identifies which feature fired by comparing the feature
+against the registry at server start. Ids that do not exist are
 reported once in the log but never prevent the pack from loading.
 
 ### Object Form
@@ -327,53 +327,6 @@ Requires the block directly below the tree to be a specific type.
   tree_type: some-mod:some_tree
   weight: 2
 ```
-
----
-
-## JavaScript Definitions (Orchard: Scripting addon)
-
-Install the optional **Orchard: Scripting** addon and you can put `.js` files
-into a pack's `data/` folder alongside YAML files. A script calls `define(...)`
-once per definition; the fields are exactly the same as in YAML:
-
-```js
-// data/trees.js
-define({
-    nbt: "big_oak.nbt",
-    tree_type: "fancy_oak",
-    weight: 3,
-    min_spacing: 6,
-    biomes: [orchard.biome("forest"), orchard.biome("dark_forest")]
-});
-
-// scripts are real programs - generate variants with loops:
-for (var i = 1; i <= 5; i++) {
-    define({
-        nbt: "birch" + i + ".nbt",
-        tree_type: "birch",
-        biomes: orchard.tag("#is_forest"),
-        rare: (i === 5)
-    });
-}
-```
-
-Helper namespace:
-
-| Function | Returns |
-|----------|---------|
-| `orchard.biome(name)` | Biome id, namespaced if needed (`forest` → `minecraft:forest`) |
-| `orchard.tag(name)` | Biome tag id (`#is_forest` → `#minecraft:is_forest`) |
-| `orchard.block(id)` | Block id, namespaced if needed |
-| `orchard.log(msg)` | Writes to the server log |
-
-Rules:
-
-* Scripts run once at pack load (and on `/orchard reload`) - never during world
-  generation.
-* They execute in a sandbox: JavaScript standard library only, no access to
-  Java classes, hard 5-second time limit per script.
-* Definitions produced by scripts go through exactly the same validation as
-  YAML entries; a broken script is logged and skipped.
 
 ---
 

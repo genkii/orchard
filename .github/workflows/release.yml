@@ -35,7 +35,7 @@ jobs:
             exit 1
           fi
 
-      - name: Build distribution JARs (full + tiny + scripting)
+      - name: Build distribution JARs (full + tiny)
         run: ./bundle.sh
 
       - name: Create GitHub Release
