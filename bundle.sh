@@ -69,7 +69,7 @@ remove_default_config() {
 }
 
 build() {
-    (cd "$1" && ./gradlew :fabric:build :neoforge:build --no-daemon -q 2>&1 | tail -5)
+    (cd "$1" && ./gradlew :fabric:build :neoforge:build --no-daemon --build-cache -q 2>&1 | tail -5)
 }
 
 collect() {
@@ -99,7 +99,7 @@ fi
 
 echo "[4/4] Building -TINY JARs (without built-in defaults)..."
 remove_default_config "$TEMP_DIR/orchard"
-(cd "$TEMP_DIR/orchard" && ./gradlew clean :fabric:build :neoforge:build --no-daemon -q 2>&1 | tail -5)
+(cd "$TEMP_DIR/orchard" && ./gradlew clean :fabric:build :neoforge:build --no-daemon --build-cache -q 2>&1 | tail -5)
 
 mkdir -p "$OUTPUT_DIR"
 for jar in $(find "$TEMP_DIR/orchard/fabric/build/libs" "$TEMP_DIR/orchard/neoforge/build/libs" \

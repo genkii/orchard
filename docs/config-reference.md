@@ -125,6 +125,7 @@ filters, or an array of any of these (matches if any entry matches).
 | `jungle_bush` | Jungle bush |
 | `acacia` | Acacia tree |
 | `dark_oak` | Dark oak tree |
+| `pale_oak` | Pale oak tree (creaking variant included) |
 | `cherry` | Cherry tree |
 | `swamp` | Swamp tree |
 | `azalea` | Azalea tree |
@@ -218,9 +219,9 @@ Vanilla biome ids without namespace: `plains`, `sunflower_plains`, `meadow`,
 `snowy_taiga`, `old_growth_pine_taiga`, `old_growth_spruce_taiga`, `jungle`,
 `sparse_jungle`, `bamboo_jungle`, `savanna`, `savanna_plateau`,
 `windswept_savanna`, `windswept_hills`, `windswept_gravelly_hills`, `grove`,
-`swamp`, `mangrove_swamp`, `cherry_grove`, `mushroom_fields`, `lush_caves`,
-`crimson_forest`, `warped_forest`, `nether_wastes`, `soul_sand_valley`,
-`basalt_deltas`.
+`swamp`, `mangrove_swamp`, `cherry_grove`, `mushroom_fields`, `pale_garden`,
+`dappled_forest`, `lush_caves`, `crimson_forest`, `warped_forest`,
+`nether_wastes`, `soul_sand_valley`, `basalt_deltas`.
 
 Namespaced ids also work, including modded biomes: `some-mod:some_biome`.
 

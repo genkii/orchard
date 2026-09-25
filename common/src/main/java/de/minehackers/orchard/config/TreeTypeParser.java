@@ -110,6 +110,7 @@ final class TreeTypeParser {
             case "jungle_bush" -> TreeMatchers.JUNGLE_BUSH;
             case "acacia" -> TreeMatchers.ACACIA;
             case "dark_oak" -> TreeMatchers.DARK_OAK;
+            case "pale_oak" -> TreeMatchers.PALE_OAK;
             case "cherry" -> TreeMatchers.CHERRY;
             case "swamp" -> TreeMatchers.SWAMP;
             case "azalea" -> TreeMatchers.AZALEA;

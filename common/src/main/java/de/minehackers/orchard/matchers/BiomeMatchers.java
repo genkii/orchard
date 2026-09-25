@@ -57,6 +57,8 @@ public final class BiomeMatchers {
     public static final Predicate<Holder<Biome>> MANGROVE_SWAMP = is(Biomes.MANGROVE_SWAMP);
     public static final Predicate<Holder<Biome>> CHERRY_GROVE = is(Biomes.CHERRY_GROVE);
     public static final Predicate<Holder<Biome>> MUSHROOM_FIELDS = is(Biomes.MUSHROOM_FIELDS);
+    public static final Predicate<Holder<Biome>> PALE_GARDEN = is(Biomes.PALE_GARDEN);
+    public static final Predicate<Holder<Biome>> DAPPLED_FOREST = is(Biomes.DAPPLED_FOREST);
     public static final Predicate<Holder<Biome>> LUSH_CAVES = is(Biomes.LUSH_CAVES);
     public static final Predicate<Holder<Biome>> CRIMSON_FOREST = is(Biomes.CRIMSON_FOREST);
     public static final Predicate<Holder<Biome>> WARPED_FOREST = is(Biomes.WARPED_FOREST);

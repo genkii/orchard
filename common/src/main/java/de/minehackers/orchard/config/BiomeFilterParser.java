@@ -145,6 +145,8 @@ final class BiomeFilterParser {
             case "mangrove_swamp" -> BiomeMatchers.MANGROVE_SWAMP;
             case "cherry_grove" -> BiomeMatchers.CHERRY_GROVE;
             case "mushroom_fields" -> BiomeMatchers.MUSHROOM_FIELDS;
+            case "pale_garden" -> BiomeMatchers.PALE_GARDEN;
+            case "dappled_forest" -> BiomeMatchers.DAPPLED_FOREST;
             case "lush_caves" -> BiomeMatchers.LUSH_CAVES;
             case "crimson_forest" -> BiomeMatchers.CRIMSON_FOREST;
             case "warped_forest" -> BiomeMatchers.WARPED_FOREST;

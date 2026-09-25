@@ -80,6 +80,10 @@ public final class TreeMatchers {
     public static final BiPredicate<TreeFeature, WorldGenLevel> DARK_OAK = byFoliage(DarkOakFoliagePlacer.class)
             .and(byTrunkBlock(Blocks.DARK_OAK_LOG));
 
+    /// Pale oak, creaking variant included - same trunk and foliage placers.
+    public static final BiPredicate<TreeFeature, WorldGenLevel> PALE_OAK = byFoliage(DarkOakFoliagePlacer.class)
+            .and(byTrunkBlock(Blocks.PALE_OAK_LOG));
+
     public static final BiPredicate<TreeFeature, WorldGenLevel> CHERRY = byFoliage(CherryFoliagePlacer.class);
 
     /// Swamp oak: oak log with blob foliage that keeps its vines.
